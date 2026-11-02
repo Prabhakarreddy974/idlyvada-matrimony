@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 export default function AuthPage() {
   const [email, setEmail] = useState('')
@@ -10,7 +10,7 @@ export default function AuthPage() {
   const [isSignUp, setIsSignUp] = useState(false)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
-  const router = useRouter()
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -22,18 +22,46 @@ export default function AuthPage() {
       if (error) {
         setMessage(error.message)
       } else {
-        setMessage('Registration successful! Check your email or log in.')
+        setMessage('Registration successful! You can now sign in.')
+        setIsSignUp(false)
       }
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) {
         setMessage(error.message)
       } else {
-        router.push('/')
-        router.refresh()
+        setIsLoggedIn(true)
       }
     }
     setLoading(false)
+  }
+
+  if (isLoggedIn) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+        <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl border border-slate-100 text-center space-y-6">
+          <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-xl font-bold">
+            ✓
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+              Successfully Signed In!
+            </h1>
+            <p className="text-sm text-slate-500">
+              Welcome back to Idlyvada Matrimony.
+            </p>
+          </div>
+          <div className="pt-2">
+            <Link
+              href="/"
+              className="inline-block w-full py-3 px-4 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-medium text-sm shadow-md shadow-rose-600/20 transition-all"
+            >
+              Go to Home Page
+            </Link>
+          </div>
+        </div>
+      </main>
+    )
   }
 
   return (
