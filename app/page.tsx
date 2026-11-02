@@ -11,13 +11,11 @@ export default function Home() {
   const router = useRouter()
 
   useEffect(() => {
-    // Check current auth session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
       setLoading(false)
     })
 
-    // Listen for auth changes (login/logout)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
     })
@@ -52,18 +50,26 @@ export default function Home() {
           A secure, modern, and dedicated space designed to help you connect with verified profiles and begin your journey together.
         </p>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+        <div className="flex flex-col items-center justify-center gap-4 pt-4">
           {user ? (
-            <div className="flex flex-col sm:flex-row items-center gap-4">
-              <span className="text-sm font-medium text-slate-700 bg-white px-4 py-3 rounded-xl border border-slate-200 shadow-sm">
+            <div className="space-y-4 w-full max-w-md">
+              <div className="text-sm font-medium text-slate-700 bg-white px-4 py-3 rounded-xl border border-slate-200 shadow-sm">
                 Signed in as: <strong className="text-rose-600">{user.email}</strong>
-              </span>
-              <button
-                onClick={handleSignOut}
-                className="px-6 py-3 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-medium text-sm transition-all"
-              >
-                Sign Out
-              </button>
+              </div>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <Link
+                  href="/profile/create"
+                  className="w-full sm:w-auto px-6 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-medium text-sm shadow-md shadow-rose-600/20 transition-all"
+                >
+                  Create / Edit Profile
+                </Link>
+                <button
+                  onClick={handleSignOut}
+                  className="w-full sm:w-auto px-6 py-3 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-medium text-sm transition-all"
+                >
+                  Sign Out
+                </button>
+              </div>
             </div>
           ) : (
             <Link
