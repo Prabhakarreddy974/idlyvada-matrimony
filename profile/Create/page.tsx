@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 export default function CreateProfilePage() {
   const [fullName, setFullName] = useState('')
@@ -55,16 +56,21 @@ export default function CreateProfilePage() {
   return (
     <main className="min-h-screen bg-slate-50 py-12 px-4 flex items-center justify-center">
       <div className="w-full max-w-2xl bg-white p-8 rounded-2xl shadow-xl border border-slate-100 space-y-6">
-        <div className="text-center space-y-2">
-          <span className="px-3 py-1 text-xs font-semibold uppercase tracking-wider text-rose-600 bg-rose-50 rounded-full border border-rose-100">
-            Matrimonial Biodata
-          </span>
-          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">
-            Create Your Profile
-          </h1>
-          <p className="text-sm text-slate-500">
-            Provide your details so matches can find you.
-          </p>
+        <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+          <div>
+            <span className="px-3 py-1 text-xs font-semibold uppercase tracking-wider text-rose-600 bg-rose-50 rounded-full border border-rose-100">
+              Matrimonial Biodata
+            </span>
+            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 mt-1">
+              Create Your Profile
+            </h1>
+          </div>
+          <Link
+            href="/"
+            className="text-xs font-medium text-slate-600 hover:text-rose-600 transition-colors"
+          >
+            ← Back to Home
+          </Link>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -121,7 +127,7 @@ export default function CreateProfilePage() {
                 required
                 value={occupation}
                 onChange={(e) => setOccupation(e.target.value)}
-                placeholder="Software Engineer / Tax Consultant"
+                placeholder="Software / Tax Consultant"
                 className="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
               />
             </div>
@@ -163,7 +169,7 @@ export default function CreateProfilePage() {
               rows={3}
               value={aboutMe}
               onChange={(e) => setAboutMe(e.target.value)}
-              placeholder="Write a brief introduction about yourself, your hobbies, and background..."
+              placeholder="Write a brief introduction about yourself..."
               className="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
             />
           </div>
