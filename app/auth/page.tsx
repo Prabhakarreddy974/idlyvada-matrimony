@@ -22,7 +22,7 @@ export default function AuthPage() {
       if (error) {
         setMessage(error.message)
       } else {
-        setMessage('Registration successful! Check your email for verification link, or log in if email confirmation is disabled.')
+        setMessage('Registration successful! Check your email or log in.')
       }
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
@@ -37,59 +37,70 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-md">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            {isSignUp ? 'Create your Matrimony Account' : 'Sign in to Idlyvada Matrimony'}
-          </h2>
+    <main className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+      <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl border border-slate-100 space-y-6">
+        <div className="text-center space-y-2">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            {isSignUp ? 'Create Matrimony Account' : 'Welcome to Idlyvada Matrimony'}
+          </h1>
+          <p className="text-sm text-slate-500">
+            {isSignUp ? 'Sign up to find your perfect match' : 'Please sign in to your account'}
+          </p>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleAuth}>
-          <div className="rounded-md shadow-sm -space-y-px">
-            <div>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email address"
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-              />
-            </div>
-            <div>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password"
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-              />
-            </div>
-          </div>
 
-          {message && <p className="text-sm text-center text-red-600">{message}</p>}
+        <form onSubmit={handleAuth} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+              Email Address
+            </label>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="name@example.com"
+              className="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent transition-all"
+            />
+          </div>
 
           <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              {loading ? 'Processing...' : isSignUp ? 'Sign Up' : 'Sign In'}
-            </button>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+              Password
+            </label>
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              className="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent transition-all"
+            />
           </div>
+
+          {message && (
+            <div className="p-3 text-xs rounded-lg bg-rose-50 text-rose-700 border border-rose-200">
+              {message}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 px-4 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-medium text-sm shadow-md shadow-rose-600/20 transition-all disabled:opacity-50"
+          >
+            {loading ? 'Processing...' : isSignUp ? 'Create Account' : 'Sign In'}
+          </button>
         </form>
 
-        <div className="text-center mt-4">
+        <div className="text-center pt-2 border-t border-slate-100">
           <button
             onClick={() => setIsSignUp(!isSignUp)}
-            className="text-sm text-indigo-600 hover:text-indigo-500 font-medium"
+            className="text-xs font-medium text-rose-600 hover:text-rose-700 transition-colors"
           >
-            {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
+            {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
           </button>
         </div>
       </div>
-    </div>
+    </main>
   )
 }
