@@ -1,4 +1,4 @@
-'export const dynamic = 'force-dynamic''
+'use client'
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
@@ -12,9 +12,30 @@ export default function MatchesPage() {
   useEffect(() => {
     async function fetchProfiles() {
       try {
+        // 1. Get current logged-in user session locally
+        const { data: { session } } = await supabase.auth.getSession()
+        let currentUserGender = 'Male' // default fallback
+
+        if (session?.user) {
+          const { data: myProfile } = await supabase
+            .from('profiles')
+            .select('gender')
+            .eq('id', session.user.id)
+            .maybeSingle()
+          
+          if (myProfile?.gender) {
+            currentUserGender = myProfile.gender
+          }
+        }
+
+        // 2. Target opposite gender for matchmaking
+        const targetGender = currentUserGender === 'Male' ? 'Female' : 'Male'
+
+        // 3. Fetch opposite gender profiles
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
+          .eq('gender', targetGender)
           .order('created_at', { ascending: false })
 
         if (data) {
@@ -42,7 +63,7 @@ export default function MatchesPage() {
   if (loading) {
     return (
       <main className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <p className="text-sm text-slate-500">Loading matches...</p>
+        <p className="text-sm text-slate-500">Loading compatible matches...</p>
       </main>
     )
   }
@@ -79,7 +100,7 @@ export default function MatchesPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredProfiles.length === 0 ? (
-            <p className="text-sm text-slate-500 col-span-2 text-center py-8">No profiles found in the database yet. Create a profile first!</p>
+            <p className="text-sm text-slate-500 col-span-2 text-center py-8">No matching opposite-gender profiles found yet.</p>
           ) : (
             filteredProfiles.map((profile) => (
               <div key={profile.id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4 flex flex-col justify-between">
@@ -102,7 +123,7 @@ export default function MatchesPage() {
                 </div>
 
                 <Link
-                  href={`/profile/${profile.id}`}
+                  href={`/profile?id=${profile.id}`}
                   className="w-full py-2 px-4 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-800 text-center font-medium text-xs transition-all block"
                 >
                   View Full Biodata →

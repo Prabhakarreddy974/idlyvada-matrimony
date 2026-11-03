@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useState, use } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
-export default function ViewProfilePage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params)
-  const id = resolvedParams.id
+function ProfileContent() {
+  const searchParams = useSearchParams()
+  const id = searchParams.get('id')
 
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -119,5 +120,13 @@ export default function ViewProfilePage({ params }: { params: Promise<{ id: stri
         </div>
       </div>
     </main>
+  )
+}
+
+export default function ViewProfilePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-50 flex items-center justify-center"><p className="text-sm text-slate-500">Loading...</p></div>}>
+      <ProfileContent />
+    </Suspense>
   )
 }
