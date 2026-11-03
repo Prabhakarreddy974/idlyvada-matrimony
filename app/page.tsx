@@ -59,17 +59,23 @@ export default function Home() {
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                 <Link
                   href="/create-profile"
-                  className="w-full sm:w-auto px-6 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-medium text-sm shadow-md shadow-rose-600/20 transition-all"
+                  className="w-full sm:w-auto px-5 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-medium text-sm shadow-md shadow-rose-600/20 transition-all"
                 >
                   Create / Edit Profile
                 </Link>
-                <button
-                  onClick={handleSignOut}
-                  className="w-full sm:w-auto px-6 py-3 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-medium text-sm transition-all"
+                <Link
+                  href="/matches"
+                  className="w-full sm:w-auto px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-medium text-sm shadow-md transition-all"
                 >
-                  Sign Out
-                </button>
+                  Browse Matches
+                </Link>
               </div>
+              <button
+                onClick={handleSignOut}
+                className="text-xs text-slate-500 hover:text-slate-800 underline transition-all pt-2"
+              >
+                Sign Out
+              </button>
             </div>
           ) : (
             <Link
