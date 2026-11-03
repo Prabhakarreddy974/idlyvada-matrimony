@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -15,8 +15,40 @@ export default function CreateProfilePage() {
   const [aboutMe, setAboutMe] = useState('')
   const [partnerPreference, setPartnerPreference] = useState('')
   const [loading, setLoading] = useState(false)
+  const [fetching, setFetching] = useState(true)
   const [message, setMessage] = useState('')
   const router = useRouter()
+
+  useEffect(() => {
+    async function loadProfile() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        setFetching(false)
+        return
+      }
+
+      // Fetch existing profile data if it exists
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+
+      if (data) {
+        setFullName(data.full_name || '')
+        setGender(data.gender || 'Male')
+        setDob(data.date_of_birth || '')
+        setOccupation(data.occupation || '')
+        setCity(data.city || '')
+        setState(data.state || '')
+        setAboutMe(data.about_me || '')
+        setPartnerPreference(data.partner_preference || '')
+      }
+      setFetching(false)
+    }
+
+    loadProfile()
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -53,6 +85,14 @@ export default function CreateProfilePage() {
     setLoading(false)
   }
 
+  if (fetching) {
+    return (
+      <main className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <p className="text-sm text-slate-500">Loading your profile...</p>
+      </main>
+    )
+  }
+
   return (
     <main className="min-h-screen bg-slate-50 py-12 px-4 flex items-center justify-center">
       <div className="w-full max-w-2xl bg-white p-8 rounded-2xl shadow-xl border border-slate-100 space-y-6">
@@ -62,7 +102,7 @@ export default function CreateProfilePage() {
               Matrimonial Biodata
             </span>
             <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 mt-1">
-              Create Your Profile
+              Create / Edit Your Profile
             </h1>
           </div>
           <Link
