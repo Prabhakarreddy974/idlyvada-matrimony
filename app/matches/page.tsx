@@ -12,36 +12,21 @@ export default function MatchesPage() {
   useEffect(() => {
     async function fetchProfiles() {
       try {
-        // 1. Get session locally (instant, no network hang)
-        const { data: { session } } = await supabase.auth.getSession()
-        let targetGender = 'Female' // default fallback
-
-        if (session?.user) {
-          const { data: myProfile } = await supabase
-            .from('profiles')
-            .select('gender')
-            .eq('id', session.user.id)
-            .maybeSingle()
-          
-          if (myProfile?.gender) {
-            targetGender = myProfile.gender === 'Male' ? 'Female' : 'Male'
-          }
-        }
-
-        // 2. Fetch opposite gender profiles
+        // Direct fetch of all profiles to guarantee instant loading
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
-          .eq('gender', targetGender)
           .order('created_at', { ascending: false })
 
         if (data) {
           setProfiles(data)
         }
+        if (error) {
+          console.error('Supabase error:', error.message)
+        }
       } catch (err) {
-        console.error('Error fetching matches:', err)
+        console.error('Fetch error:', err)
       } finally {
-        // ALWAYS stop loading so the screen never freezes
         setLoading(false)
       }
     }
@@ -95,7 +80,7 @@ export default function MatchesPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredProfiles.length === 0 ? (
-            <p className="text-sm text-slate-500 col-span-2 text-center py-8">No matching profiles found at the moment.</p>
+            <p className="text-sm text-slate-500 col-span-2 text-center py-8">No profiles found in the database yet. Create a profile first!</p>
           ) : (
             filteredProfiles.map((profile) => (
               <div key={profile.id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4 flex flex-col justify-between">
