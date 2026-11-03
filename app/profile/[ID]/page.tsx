@@ -1,20 +1,19 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, use } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
-export default function ViewProfilePage() {
+export default function ViewProfilePage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(params)
+  const id = resolvedParams.id
+
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function fetchProfile() {
-      // Extract the ID directly from the URL path reliably
-      const pathSegments = window.location.pathname.split('/')
-      const profileId = pathSegments[pathSegments.length - 1]
-
-      if (!profileId || profileId === 'id') {
+      if (!id) {
         setLoading(false)
         return
       }
@@ -23,7 +22,7 @@ export default function ViewProfilePage() {
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', profileId)
+          .eq('id', id)
           .maybeSingle()
 
         if (data) {
@@ -40,7 +39,7 @@ export default function ViewProfilePage() {
     }
 
     fetchProfile()
-  }, [])
+  }, [id])
 
   if (loading) {
     return (
