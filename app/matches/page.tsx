@@ -11,9 +11,32 @@ export default function MatchesPage() {
 
   useEffect(() => {
     async function fetchProfiles() {
+      // 1. Get current logged-in user
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      let currentUserGender = 'Male' // default fallback
+
+      if (user) {
+        // Fetch current user's profile to know their gender
+        const { data: myProfile } = await supabase
+          .from('profiles')
+          .select('gender')
+          .eq('id', user.id)
+          .single()
+        
+        if (myProfile?.gender) {
+          currentUserGender = myProfile.gender
+        }
+      }
+
+      // 2. Determine target search gender (Opposite gender matchmaking)
+      const targetGender = currentUserGender === 'Male' ? 'Female' : 'Male'
+
+      // 3. Fetch profiles matching the opposite gender
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
+        .eq('gender', targetGender)
         .order('created_at', { ascending: false })
 
       if (data) {
@@ -34,7 +57,7 @@ export default function MatchesPage() {
   if (loading) {
     return (
       <main className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <p className="text-sm text-slate-500">Loading matches...</p>
+        <p className="text-sm text-slate-500">Loading compatible matches...</p>
       </main>
     )
   }
@@ -45,10 +68,10 @@ export default function MatchesPage() {
         <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
           <div>
             <span className="px-3 py-1 text-xs font-semibold uppercase tracking-wider text-rose-600 bg-rose-50 rounded-full border border-rose-100">
-              Verified Members
+              Verified Matches
             </span>
             <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 mt-1">
-              Find Your Match
+              Compatible Profiles
             </h1>
           </div>
           <Link
@@ -71,18 +94,21 @@ export default function MatchesPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredProfiles.length === 0 ? (
-            <p className="text-sm text-slate-500 col-span-2 text-center py-8">No profiles found.</p>
+            <p className="text-sm text-slate-500 col-span-2 text-center py-8">No matching profiles found at the moment.</p>
           ) : (
             filteredProfiles.map((profile) => (
               <div key={profile.id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4 flex flex-col justify-between">
                 <div className="space-y-2">
                   <div className="flex justify-between items-start">
-                    <h3 className="text-lg font-bold text-slate-900">{profile.full_name}</h3>
-                    <span className="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-slate-100 text-slate-700">
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-900">{profile.full_name}</h3>
+                      <span className="text-[10px] font-mono text-slate-400">ID: {profile.id.slice(0, 8).toUpperCase()}</span>
+                    </div>
+                    <span className="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-rose-50 text-rose-600">
                       {profile.gender}
                     </span>
                   </div>
-                  <p className="text-xs font-medium text-rose-600">
+                  <p className="text-xs font-medium text-slate-700">
                     {profile.occupation} • {profile.city}, {profile.state}
                   </p>
                   <p className="text-xs text-slate-600 line-clamp-2">
