@@ -11,34 +11,39 @@ export default function MatchesPage() {
 
   useEffect(() => {
     async function fetchProfiles() {
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      let targetGender = 'Female' // default fallback
+      try {
+        // 1. Get session locally (instant, no network hang)
+        const { data: { session } } = await supabase.auth.getSession()
+        let targetGender = 'Female' // default fallback
 
-      if (user) {
-        // Quick fetch for user gender
-        const { data: myProfile } = await supabase
-          .from('profiles')
-          .select('gender')
-          .eq('id', user.id)
-          .maybeSingle()
-        
-        if (myProfile?.gender) {
-          targetGender = myProfile.gender === 'Male' ? 'Female' : 'Male'
+        if (session?.user) {
+          const { data: myProfile } = await supabase
+            .from('profiles')
+            .select('gender')
+            .eq('id', session.user.id)
+            .maybeSingle()
+          
+          if (myProfile?.gender) {
+            targetGender = myProfile.gender === 'Male' ? 'Female' : 'Male'
+          }
         }
-      }
 
-      // Fetch opposite gender profiles
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('gender', targetGender)
-        .order('created_at', { ascending: false })
+        // 2. Fetch opposite gender profiles
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('gender', targetGender)
+          .order('created_at', { ascending: false })
 
-      if (data) {
-        setProfiles(data)
+        if (data) {
+          setProfiles(data)
+        }
+      } catch (err) {
+        console.error('Error fetching matches:', err)
+      } finally {
+        // ALWAYS stop loading so the screen never freezes
+        setLoading(false)
       }
-      setLoading(false)
     }
 
     fetchProfiles()
@@ -53,7 +58,7 @@ export default function MatchesPage() {
   if (loading) {
     return (
       <main className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <p className="text-sm text-slate-500 animate-pulse">Loading matches instantly...</p>
+        <p className="text-sm text-slate-500">Loading matches...</p>
       </main>
     )
   }
