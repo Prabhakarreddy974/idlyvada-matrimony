@@ -13,16 +13,31 @@ export default function ViewProfilePage() {
 
   useEffect(() => {
     async function fetchProfile() {
-      if (!id) return
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', id)
-        .single()
+      if (!id) {
+        setLoading(false)
+        return
+      }
 
-      if (data) setProfile(data)
-      setLoading(false)
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', id)
+          .maybeSingle()
+
+        if (data) {
+          setProfile(data)
+        }
+        if (error) {
+          console.error('Supabase error:', error.message)
+        }
+      } catch (err) {
+        console.error('Fetch error:', err)
+      } finally {
+        setLoading(false)
+      }
     }
+
     fetchProfile()
   }, [id])
 
@@ -51,9 +66,14 @@ export default function ViewProfilePage() {
             <span className="px-3 py-1 text-xs font-semibold uppercase tracking-wider text-rose-600 bg-rose-50 rounded-full border border-rose-100">
               Biodata Details
             </span>
-            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 mt-1">
-              {profile.full_name}
-            </h1>
+            <div className="flex items-center gap-2 mt-1">
+              <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">
+                {profile.full_name}
+              </h1>
+              <span className="text-xs font-mono text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
+                ID: {profile.id?.slice(0, 8).toUpperCase()}
+              </span>
+            </div>
           </div>
           <Link
             href="/matches"
