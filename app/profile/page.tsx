@@ -103,6 +103,35 @@ function ProfileContent() {
           </div>
         </div>
 
+        {/* Social Profiles Section */}
+        {(profile.instagram || profile.linked_in) && (
+          <div className="space-y-2">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-600">Social Profiles</h3>
+            <div className="flex flex-wrap gap-3">
+              {profile.instagram && (
+                <a
+                  href={profile.instagram.startsWith('http') ? profile.instagram : `https://${profile.instagram}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 rounded-xl bg-pink-50 text-pink-600 hover:bg-pink-100 font-medium text-xs border border-pink-100 transition-all flex items-center gap-2"
+                >
+                  📸 Instagram Profile →
+                </a>
+              )}
+              {profile.linked_in && (
+                <a
+                  href={profile.linked_in.startsWith('http') ? profile.linked_in : `https://${profile.linked_in}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 font-medium text-xs border border-blue-100 transition-all flex items-center gap-2"
+                >
+                  💼 LinkedIn Profile →
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="space-y-4">
           <div>
             <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">About Me</h3>
