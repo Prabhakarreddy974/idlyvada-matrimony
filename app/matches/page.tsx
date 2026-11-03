@@ -1,4 +1,4 @@
-'use client'
+'export const dynamic = 'force-dynamic''
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
@@ -12,7 +12,6 @@ export default function MatchesPage() {
   useEffect(() => {
     async function fetchProfiles() {
       try {
-        // Direct fetch of all profiles to guarantee instant loading
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
