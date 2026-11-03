@@ -2,18 +2,19 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useParams } from 'next/navigation'
 import Link from 'next/link'
 
 export default function ViewProfilePage() {
-  const params = useParams()
-  const id = params?.id as string
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function fetchProfile() {
-      if (!id) {
+      // Extract the ID directly from the URL path reliably
+      const pathSegments = window.location.pathname.split('/')
+      const profileId = pathSegments[pathSegments.length - 1]
+
+      if (!profileId || profileId === 'id') {
         setLoading(false)
         return
       }
@@ -22,7 +23,7 @@ export default function ViewProfilePage() {
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', id)
+          .eq('id', profileId)
           .maybeSingle()
 
         if (data) {
@@ -39,7 +40,7 @@ export default function ViewProfilePage() {
     }
 
     fetchProfile()
-  }, [id])
+  }, [])
 
   if (loading) {
     return (
