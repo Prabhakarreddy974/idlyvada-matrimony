@@ -11,29 +11,25 @@ export default function MatchesPage() {
 
   useEffect(() => {
     async function fetchProfiles() {
-      // 1. Get current logged-in user
       const { data: { user } } = await supabase.auth.getUser()
       
-      let currentUserGender = 'Male' // default fallback
+      let targetGender = 'Female' // default fallback
 
       if (user) {
-        // Fetch current user's profile to know their gender
+        // Quick fetch for user gender
         const { data: myProfile } = await supabase
           .from('profiles')
           .select('gender')
           .eq('id', user.id)
-          .single()
+          .maybeSingle()
         
         if (myProfile?.gender) {
-          currentUserGender = myProfile.gender
+          targetGender = myProfile.gender === 'Male' ? 'Female' : 'Male'
         }
       }
 
-      // 2. Determine target search gender (Opposite gender matchmaking)
-      const targetGender = currentUserGender === 'Male' ? 'Female' : 'Male'
-
-      // 3. Fetch profiles matching the opposite gender
-      const { data, error } = await supabase
+      // Fetch opposite gender profiles
+      const { data } = await supabase
         .from('profiles')
         .select('*')
         .eq('gender', targetGender)
@@ -57,7 +53,7 @@ export default function MatchesPage() {
   if (loading) {
     return (
       <main className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <p className="text-sm text-slate-500">Loading compatible matches...</p>
+        <p className="text-sm text-slate-500 animate-pulse">Loading matches instantly...</p>
       </main>
     )
   }
