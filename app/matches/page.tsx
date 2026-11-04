@@ -116,9 +116,18 @@ export default function MatchesPage() {
                 <div key={profile.id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4 flex flex-col justify-between">
                   <div className="space-y-3">
                     <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="text-lg font-bold text-slate-900">{profile.full_name}</h3>
-                        <span className="text-[10px] font-mono text-slate-400">ID: {profile.id.slice(0, 8).toUpperCase()}</span>
+                      <div className="flex items-center gap-3">
+                        {profile.photo_url ? (
+                          <img src={profile.photo_url} alt={profile.full_name} className="w-12 h-12 rounded-full object-cover border border-slate-200 shadow-sm" />
+                        ) : (
+                          <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 text-xs font-bold">
+                            {profile.full_name?.charAt(0) || 'U'}
+                          </div>
+                        )}
+                        <div>
+                          <h3 className="text-lg font-bold text-slate-900">{profile.full_name}</h3>
+                          <span className="text-[10px] font-mono text-slate-400">ID: {profile.id.slice(0, 8).toUpperCase()}</span>
+                        </div>
                       </div>
                       <span className="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-rose-50 text-rose-600">
                         {profile.gender}
@@ -128,7 +137,7 @@ export default function MatchesPage() {
                     {/* Explicit Preview Details: Age • Height • Occupation • Location */}
                     <div className="text-xs font-medium text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-100 space-y-1">
                       <p className="font-semibold text-slate-900">
-                        {age ? `${age} Yrs` : 'Age N/A'} {profile.height ? `• ${profile.height}` : ''} {profile.occupation ? `• ${profile.occupation}` : '• Occupation N/A'}
+                        {age ? `${age} Yrs` : 'Age N/A'} {profile.height ? `• ${profile.height}` : ''} {profile.occupation ? `• ${profile.occupation}` : ''}
                       </p>
                       <p className="text-slate-500">
                         📍 {profile.present_location || `${profile.city}, ${profile.state}` || 'Location not specified'}
