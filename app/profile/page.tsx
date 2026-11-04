@@ -11,6 +11,8 @@ function ProfileContent() {
 
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [sendingInterest, setSendingInterest] = useState(false)
+  const [interestSent, setInterestSent] = useState(false)
 
   useEffect(() => {
     async function fetchProfile() {
@@ -32,6 +34,21 @@ function ProfileContent() {
         if (error) {
           console.error('Supabase error:', error.message)
         }
+
+        // Check if current user already sent an interest
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.user) {
+          const { data: existingInterest } = await supabase
+            .from('interests')
+            .select('id')
+            .eq('sender_id', session.user.id)
+            .eq('receiver_id', id)
+            .maybeSingle()
+
+          if (existingInterest) {
+            setInterestSent(true)
+          }
+        }
       } catch (err) {
         console.error('Fetch error:', err)
       } finally {
@@ -41,6 +58,34 @@ function ProfileContent() {
 
     fetchProfile()
   }, [id])
+
+  const handleSendInterest = async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.user) {
+      alert('Please log in to send an interest.')
+      return
+    }
+
+    if (session.user.id === id) {
+      alert("You cannot send an interest to your own profile.")
+      return
+    }
+
+    setSendingInterest(true)
+    const { error } = await supabase.from('interests').insert({
+      sender_id: session.user.id,
+      receiver_id: id,
+      status: 'pending'
+    })
+
+    if (error) {
+      alert('Error sending interest or already sent: ' + error.message)
+    } else {
+      setInterestSent(true)
+      alert('Interest sent successfully!')
+    }
+    setSendingInterest(false)
+  }
 
   if (loading) {
     return (
@@ -86,18 +131,23 @@ function ProfileContent() {
           </Link>
         </div>
 
-        {/* Contact Information Box */}
+        {/* Action Button: Send Interest */}
         <div className="bg-rose-50 border border-rose-100 p-4 rounded-xl flex justify-between items-center text-xs">
           <div>
-            <span className="text-rose-700 font-semibold block uppercase tracking-wider">Contact Number</span>
-            <strong className="text-slate-900 text-sm font-mono">{profile.mobile_number || 'Not Provided'}</strong>
+            <span className="text-rose-700 font-semibold block uppercase tracking-wider">Connect With Member</span>
+            <strong className="text-slate-900 text-sm font-mono">{profile.mobile_number || 'Contact Protected'}</strong>
           </div>
-          <a
-            href={`tel:${profile.mobile_number}`}
-            className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-medium rounded-lg shadow-sm transition-all"
+          <button
+            onClick={handleSendInterest}
+            disabled={sendingInterest || interestSent}
+            className={`px-5 py-2.5 rounded-xl font-medium text-xs shadow-sm transition-all ${
+              interestSent 
+                ? 'bg-emerald-600 text-white cursor-default' 
+                : 'bg-rose-600 hover:bg-rose-700 text-white cursor-pointer'
+            }`}
           >
-            📞 Call Member
-          </a>
+            {interestSent ? 'Interest Sent ✓' : sendingInterest ? 'Sending...' : '❤️ Send Interest'}
+          </button>
         </div>
 
         {/* Basic Details Grid */}
