@@ -15,6 +15,8 @@ export default function CreateProfilePage() {
     occupation: '',
     city: '',
     state: '',
+    present_location: '',
+    mobile_number: '',
     about_me: '',
     partner_preference: '',
     instagram: '',
@@ -30,8 +32,6 @@ export default function CreateProfilePage() {
     family_type: 'Nuclear Family',
     family_status: 'Middle Class',
     father_occupation: '',
-    brothers: 'None',
-    sisters: 'None',
   })
 
   useEffect(() => {
@@ -53,6 +53,8 @@ export default function CreateProfilePage() {
           occupation: data.occupation || '',
           city: data.city || '',
           state: data.state || '',
+          present_location: data.present_location || '',
+          mobile_number: data.mobile_number || '',
           about_me: data.about_me || '',
           partner_preference: data.partner_preference || '',
           instagram: data.instagram || '',
@@ -68,8 +70,6 @@ export default function CreateProfilePage() {
           family_type: data.family_type || 'Nuclear Family',
           family_status: data.family_status || 'Middle Class',
           father_occupation: data.father_occupation || '',
-          brothers: data.brothers || 'None',
-          sisters: data.sisters || 'None',
         })
       }
     }
@@ -125,7 +125,7 @@ export default function CreateProfilePage() {
         <form onSubmit={handleSubmit} className="space-y-6 text-xs">
           {/* Basic Information */}
           <div className="space-y-3">
-            <h3 className="font-bold text-slate-900 text-sm border-b pb-1">Basic Details</h3>
+            <h3 className="font-bold text-slate-900 text-sm border-b pb-1">Basic Details & Contact</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-slate-700 font-semibold mb-1">Full Name</label>
@@ -137,6 +137,18 @@ export default function CreateProfilePage() {
                   onChange={handleChange}
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
                   placeholder="Full name"
+                />
+              </div>
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">Mobile Number</label>
+                <input
+                  type="text"
+                  name="mobile_number"
+                  required
+                  value={formData.mobile_number}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
+                  placeholder="+91 9876543210"
                 />
               </div>
               <div>
@@ -205,25 +217,25 @@ export default function CreateProfilePage() {
                 />
               </div>
               <div>
-                <label className="block text-slate-700 font-semibold mb-1">City</label>
+                <label className="block text-slate-700 font-semibold mb-1">Present Location (Lives In)</label>
+                <input
+                  type="text"
+                  name="present_location"
+                  value={formData.present_location}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
+                  placeholder="e.g. Hyderabad, Telangana"
+                />
+              </div>
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">Native City / State</label>
                 <input
                   type="text"
                   name="city"
                   value={formData.city}
                   onChange={handleChange}
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
-                  placeholder="City"
-                />
-              </div>
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">State</label>
-                <input
-                  type="text"
-                  name="state"
-                  value={formData.state}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
-                  placeholder="State"
+                  placeholder="City, State"
                 />
               </div>
             </div>

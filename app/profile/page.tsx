@@ -86,6 +86,20 @@ function ProfileContent() {
           </Link>
         </div>
 
+        {/* Contact Information Box */}
+        <div className="bg-rose-50 border border-rose-100 p-4 rounded-xl flex justify-between items-center text-xs">
+          <div>
+            <span className="text-rose-700 font-semibold block uppercase tracking-wider">Contact Number</span>
+            <strong className="text-slate-900 text-sm font-mono">{profile.mobile_number || 'Not Provided'}</strong>
+          </div>
+          <a
+            href={`tel:${profile.mobile_number}`}
+            className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-medium rounded-lg shadow-sm transition-all"
+          >
+            📞 Call Member
+          </a>
+        </div>
+
         {/* Basic Details Grid */}
         <div className="space-y-2 text-xs">
           <h3 className="font-bold text-slate-800 uppercase tracking-wide text-[11px] text-rose-600">Personal & Professional Information</h3>
@@ -103,7 +117,11 @@ function ProfileContent() {
               <strong className="text-slate-900 text-sm">{profile.occupation || 'Not Specified'}</strong>
             </div>
             <div>
-              <span className="text-slate-500 block">Location</span>
+              <span className="text-slate-500 block">Present Location (Lives In)</span>
+              <strong className="text-slate-900 text-sm">{profile.present_location || 'Not Specified'}</strong>
+            </div>
+            <div>
+              <span className="text-slate-500 block">Native City / State</span>
               <strong className="text-slate-900 text-sm">{profile.city}, {profile.state}</strong>
             </div>
             <div>
