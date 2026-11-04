@@ -11,10 +11,12 @@ export default function Home() {
   const router = useRouter()
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    async function getUser() {
+      const { data: { session } } = await supabase.auth.getSession()
       setUser(session?.user ?? null)
       setLoading(false)
-    })
+    }
+    getUser()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
@@ -25,67 +27,78 @@ export default function Home() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
-    setUser(null)
-    router.refresh()
+    router.push('/login')
   }
 
   if (loading) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-slate-50">
+      <main className="min-h-screen bg-slate-50 flex items-center justify-center">
         <p className="text-sm text-slate-500">Loading Idlyvada Matrimony...</p>
       </main>
     )
   }
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center bg-slate-50 px-4 text-center">
-      <div className="max-w-2xl space-y-6">
-        <span className="px-3 py-1 text-xs font-semibold uppercase tracking-wider text-rose-600 bg-rose-50 rounded-full border border-rose-100">
-          Trusted Matrimony Platform
-        </span>
-        <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">
-          Find Your Perfect Life Partner with <span className="text-rose-600">Idlyvada Matrimony</span>
-        </h1>
-        <p className="text-base sm:text-lg text-slate-600 max-w-xl mx-auto">
-          A secure, modern, and dedicated space designed to help you connect with verified profiles and begin your journey together.
-        </p>
+    <main className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+      <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-xl border border-slate-100 text-center space-y-6">
+        
+        <div>
+          <span className="px-3 py-1 text-xs font-semibold uppercase tracking-wider text-rose-600 bg-rose-50 rounded-full border border-rose-100">
+            Trusted Matrimony Platform
+          </span>
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 mt-3">
+            Find Your Perfect Life Partner with <span className="text-rose-600">Idlyvada Matrimony</span>
+          </h1>
+          <p className="text-xs text-slate-500 mt-2">
+            A secure, modern, and dedicated space designed to help you connect with verified profiles and begin your journey together.
+          </p>
+        </div>
 
-        <div className="flex flex-col items-center justify-center gap-4 pt-4">
-          {user ? (
-            <div className="space-y-4 w-full max-w-md">
-              <div className="text-sm font-medium text-slate-700 bg-white px-4 py-3 rounded-xl border border-slate-200 shadow-sm">
-                Signed in as: <strong className="text-rose-600">{user.email}</strong>
-              </div>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                <Link
-                  href="/create-profile"
-                  className="w-full sm:w-auto px-5 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-medium text-sm shadow-md shadow-rose-600/20 transition-all"
-                >
-                  Create / Edit Profile
-                </Link>
-                <Link
-                  href="/matches"
-                  className="w-full sm:w-auto px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-medium text-sm shadow-md transition-all"
-                >
-                  Browse Matches
-                </Link>
-              </div>
-              <button
-                onClick={handleSignOut}
-                className="text-xs text-slate-500 hover:text-slate-800 underline transition-all pt-2"
-              >
-                Sign Out
-              </button>
+        {user ? (
+          <div className="space-y-4">
+            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs text-slate-700">
+              Signed in as: <strong className="text-rose-600">{user.email}</strong>
             </div>
-          ) : (
+
+            <div className="flex flex-col gap-3">
+              <Link
+                href="/create-profile"
+                className="w-full py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-medium text-xs shadow-md transition-all block"
+              >
+                Create / Edit Profile
+              </Link>
+              <Link
+                href="/matches"
+                className="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs shadow-md transition-all block"
+              >
+                Browse Matches
+              </Link>
+              <Link
+                href="/interests"
+                className="w-full py-3 rounded-xl bg-pink-50 hover:bg-pink-100 text-pink-600 font-medium text-xs border border-pink-200 shadow-sm transition-all flex items-center justify-center gap-2 block"
+              >
+                ❤️ Interests Received
+              </Link>
+            </div>
+
+            <button
+              onClick={handleSignOut}
+              className="text-xs text-slate-400 hover:text-slate-600 underline transition-colors pt-2 block mx-auto cursor-pointer"
+            >
+              Sign Out
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
             <Link
-              href="/auth"
-              className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-medium text-sm shadow-lg shadow-rose-600/20 transition-all"
+              href="/login"
+              className="w-full py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-medium text-xs shadow-md transition-all block"
             >
               Sign In / Register
             </Link>
-          )}
-        </div>
+          </div>
+        )}
+
       </div>
     </main>
   )
