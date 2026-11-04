@@ -12,6 +12,7 @@ export default function CreateProfilePage() {
     full_name: '',
     gender: 'Male',
     date_of_birth: '',
+    height: '',
     occupation: '',
     city: '',
     state: '',
@@ -50,6 +51,7 @@ export default function CreateProfilePage() {
           full_name: data.full_name || '',
           gender: data.gender || 'Male',
           date_of_birth: data.date_of_birth || '',
+          height: data.height || '',
           occupation: data.occupation || '',
           city: data.city || '',
           state: data.state || '',
@@ -172,6 +174,17 @@ export default function CreateProfilePage() {
                   value={formData.date_of_birth}
                   onChange={handleChange}
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
+                />
+              </div>
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">Height</label>
+                <input
+                  type="text"
+                  name="height"
+                  value={formData.height}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
+                  placeholder="e.g. 5'6&quot;"
                 />
               </div>
               <div>
