@@ -106,49 +106,65 @@ export default function MatchesPage() {
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {filteredProfiles.length === 0 ? (
             <p className="text-sm text-slate-500 col-span-2 text-center py-8">No matching opposite-gender profiles found yet. Try creating or editing a profile with the opposite gender!</p>
           ) : (
             filteredProfiles.map((profile) => {
               const age = calculateAge(profile.date_of_birth)
               return (
-                <div key={profile.id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4 flex flex-col justify-between">
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-center gap-3">
-                        {profile.photo_url ? (
-                          <img src={profile.photo_url} alt={profile.full_name} className="w-12 h-12 rounded-full object-cover border border-slate-200 shadow-sm" />
-                        ) : (
-                          <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 text-xs font-bold">
-                            {profile.full_name?.charAt(0) || 'U'}
-                          </div>
-                        )}
+                <div key={profile.id} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between space-y-4">
+                  
+                  {/* Split Layout: Left Side Photo, Right Side Details */}
+                  <div className="flex gap-4 items-start">
+                    
+                    {/* Left Column: Larger Photo */}
+                    <div className="flex-shrink-0">
+                      {profile.photo_url ? (
+                        <img 
+                          src={profile.photo_url} 
+                          alt={profile.full_name} 
+                          className="w-24 h-32 rounded-xl object-cover border border-slate-200 shadow-sm" 
+                        />
+                      ) : (
+                        <div className="w-24 h-32 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 text-xs font-bold border border-slate-200">
+                          No Photo
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Right Column: Profile Info */}
+                    <div className="flex-1 space-y-2">
+                      <div className="flex justify-between items-start">
                         <div>
-                          <h3 className="text-lg font-bold text-slate-900">{profile.full_name}</h3>
+                          <h3 className="text-base font-bold text-slate-900">{profile.full_name}</h3>
                           <span className="text-[10px] font-mono text-slate-400">ID: {profile.id.slice(0, 8).toUpperCase()}</span>
                         </div>
+                        <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-rose-50 text-rose-600">
+                          {profile.gender}
+                        </span>
                       </div>
-                      <span className="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-rose-50 text-rose-600">
-                        {profile.gender}
-                      </span>
+
+                      <div className="text-xs font-medium text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100 space-y-1">
+                        <p className="font-semibold text-slate-900">
+                          {age ? `${age} Yrs` : 'Age N/A'} {profile.height ? `• ${profile.height}` : ''}
+                        </p>
+                        <p className="text-slate-600">
+                          💼 {profile.occupation || 'Occupation N/A'}
+                        </p>
+                        <p className="text-slate-500">
+                          📍 {profile.present_location || `${profile.city}, ${profile.state}` || 'Location N/A'}
+                        </p>
+                      </div>
+
+                      <p className="text-[11px] text-slate-600 line-clamp-2">
+                        {profile.about_me || 'No description provided.'}
+                      </p>
                     </div>
 
-                    {/* Explicit Preview Details: Age • Height • Occupation • Location */}
-                    <div className="text-xs font-medium text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-100 space-y-1">
-                      <p className="font-semibold text-slate-900">
-                        {age ? `${age} Yrs` : 'Age N/A'} {profile.height ? `• ${profile.height}` : ''} {profile.occupation ? `• ${profile.occupation}` : ''}
-                      </p>
-                      <p className="text-slate-500">
-                        📍 {profile.present_location || `${profile.city}, ${profile.state}` || 'Location not specified'}
-                      </p>
-                    </div>
-
-                    <p className="text-xs text-slate-600 line-clamp-2">
-                      {profile.about_me || 'No description provided.'}
-                    </p>
                   </div>
 
+                  {/* View Full Biodata Button */}
                   <Link
                     href={`/profile?id=${profile.id}`}
                     className="w-full py-2 px-4 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-800 text-center font-medium text-xs transition-all block"
