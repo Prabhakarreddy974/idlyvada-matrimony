@@ -62,10 +62,12 @@ function ProfileContent() {
   return (
     <main className="min-h-screen bg-slate-50 py-12 px-4 flex items-center justify-center">
       <div className="w-full max-w-2xl bg-white p-8 rounded-2xl shadow-xl border border-slate-100 space-y-6">
+        
+        {/* Header */}
         <div className="flex justify-between items-center border-b border-slate-100 pb-4">
           <div>
             <span className="px-3 py-1 text-xs font-semibold uppercase tracking-wider text-rose-600 bg-rose-50 rounded-full border border-rose-100">
-              Biodata Details
+              Verified Biodata
             </span>
             <div className="flex items-center gap-2 mt-1">
               <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">
@@ -84,22 +86,76 @@ function ProfileContent() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
-          <div>
-            <span className="text-slate-500 block">Gender</span>
-            <strong className="text-slate-900 text-sm">{profile.gender}</strong>
+        {/* Basic Details Grid */}
+        <div className="space-y-2 text-xs">
+          <h3 className="font-bold text-slate-800 uppercase tracking-wide text-[11px] text-rose-600">Personal & Professional Information</h3>
+          <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <div>
+              <span className="text-slate-500 block">Gender & Status</span>
+              <strong className="text-slate-900 text-sm">{profile.gender} • {profile.marital_status || 'Never Married'}</strong>
+            </div>
+            <div>
+              <span className="text-slate-500 block">Date of Birth</span>
+              <strong className="text-slate-900 text-sm">{profile.date_of_birth}</strong>
+            </div>
+            <div>
+              <span className="text-slate-500 block">Occupation</span>
+              <strong className="text-slate-900 text-sm">{profile.occupation || 'Not Specified'}</strong>
+            </div>
+            <div>
+              <span className="text-slate-500 block">Location</span>
+              <strong className="text-slate-900 text-sm">{profile.city}, {profile.state}</strong>
+            </div>
+            <div>
+              <span className="text-slate-500 block">Mother Tongue</span>
+              <strong className="text-slate-900 text-sm">{profile.mother_tongue || 'Telugu'}</strong>
+            </div>
           </div>
-          <div>
-            <span className="text-slate-500 block">Date of Birth</span>
-            <strong className="text-slate-900 text-sm">{profile.date_of_birth}</strong>
+        </div>
+
+        {/* Religious Information */}
+        <div className="space-y-2 text-xs">
+          <h3 className="font-bold text-slate-800 uppercase tracking-wide text-[11px] text-rose-600">Religious Information</h3>
+          <div className="grid grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <div>
+              <span className="text-slate-500 block">Caste</span>
+              <strong className="text-slate-900 text-sm">{profile.caste || 'Not Specified'}</strong>
+            </div>
+            <div>
+              <span className="text-slate-500 block">Subcaste</span>
+              <strong className="text-slate-900 text-sm">{profile.subcaste || 'Not Specified'}</strong>
+            </div>
+            <div>
+              <span className="text-slate-500 block">Kuja Dosham</span>
+              <strong className="text-slate-900 text-sm">{profile.kuja_dosham || 'No'}</strong>
+            </div>
           </div>
-          <div>
-            <span className="text-slate-500 block">Occupation</span>
-            <strong className="text-slate-900 text-sm">{profile.occupation}</strong>
-          </div>
-          <div>
-            <span className="text-slate-500 block">Location</span>
-            <strong className="text-slate-900 text-sm">{profile.city}, {profile.state}</strong>
+        </div>
+
+        {/* Lifestyle & Family */}
+        <div className="space-y-2 text-xs">
+          <h3 className="font-bold text-slate-800 uppercase tracking-wide text-[11px] text-rose-600">Lifestyle & Family Details</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <div>
+              <span className="text-slate-500 block">Eating Habits</span>
+              <strong className="text-slate-900 text-sm">{profile.eating_habits || 'Vegetarian'}</strong>
+            </div>
+            <div>
+              <span className="text-slate-500 block">Smoking</span>
+              <strong className="text-slate-900 text-sm">{profile.smoking_habits || 'Non-smoker'}</strong>
+            </div>
+            <div>
+              <span className="text-slate-500 block">Drinking</span>
+              <strong className="text-slate-900 text-sm">{profile.drinking_habits || 'Non-drinker'}</strong>
+            </div>
+            <div>
+              <span className="text-slate-500 block">Family Type & Status</span>
+              <strong className="text-slate-900 text-sm">{profile.family_type} ({profile.family_status})</strong>
+            </div>
+            <div>
+              <span className="text-slate-500 block">Father's Occupation</span>
+              <strong className="text-slate-900 text-sm">{profile.father_occupation || 'Not Specified'}</strong>
+            </div>
           </div>
         </div>
 
@@ -132,6 +188,7 @@ function ProfileContent() {
           </div>
         )}
 
+        {/* About & Partner Preferences */}
         <div className="space-y-4">
           <div>
             <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">About Me</h3>
@@ -147,6 +204,7 @@ function ProfileContent() {
             </p>
           </div>
         </div>
+
       </div>
     </main>
   )
