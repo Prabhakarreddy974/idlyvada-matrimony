@@ -36,6 +36,9 @@ const HEIGHT_OPTIONS = [
 export default function CreateProfilePage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [cameraActive, setCameraActive] = useState(false)
+
   const [formData, setFormData] = useState({
     full_name: '',
     gender: 'Male',
@@ -61,6 +64,7 @@ export default function CreateProfilePage() {
     family_type: 'Nuclear Family',
     family_status: 'Middle Class',
     father_occupation: '',
+    photo_url: '',
   })
 
   useEffect(() => {
@@ -100,6 +104,7 @@ export default function CreateProfilePage() {
           family_type: data.family_type || 'Nuclear Family',
           family_status: data.family_status || 'Middle Class',
           father_occupation: data.father_occupation || '',
+          photo_url: data.photo_url || '',
         })
       }
     }
@@ -108,6 +113,82 @@ export default function CreateProfilePage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
+  }
+
+  // Handle standard photo upload from file picker
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      setUploading(true)
+      if (!e.target.files || e.target.files.length === 0) return
+      const file = e.target.files[0]
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${Math.random()}.${fileExt}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file)
+
+      if (uploadError) throw uploadError
+
+      const { data } = supabase.storage.from('avatars').getPublicUrl(fileName)
+      setFormData((prev) => ({ ...prev, photo_url: data.publicUrl }))
+      alert('Photo uploaded successfully!')
+    } catch (error: any) {
+      alert('Error uploading image: ' + error.message)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  // Start browser camera for live selfie verification
+  const startCamera = async () => {
+    setCameraActive(true)
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true })
+      const videoElement = document.getElementById('selfie-video') as HTMLVideoElement
+      if (videoElement) {
+        videoElement.srcObject = stream
+      }
+    } catch (err) {
+      alert('Unable to access camera. Please check your browser permissions.')
+      setCameraActive(false)
+    }
+  }
+
+  // Capture frame from webcam and upload as live selfie
+  const captureSelfie = () => {
+    const videoElement = document.getElementById('selfie-video') as HTMLVideoElement
+    if (!videoElement) return
+
+    const canvas = document.createElement('canvas')
+    canvas.width = videoElement.videoWidth || 320
+    canvas.height = videoElement.videoHeight || 240
+    const ctx = canvas.getContext('2d')
+    if (ctx) {
+      ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height)
+      canvas.toBlob(async (blob) => {
+        if (!blob) return
+        const file = new File([blob], 'live-selfie.jpg', { type: 'image/jpeg' })
+        
+        const fileName = `selfie-${Math.random()}.jpg`
+        const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, file)
+        
+        if (uploadError) {
+          alert('Error uploading selfie: ' + uploadError.message)
+          return
+        }
+
+        const { data } = supabase.storage.from('avatars').getPublicUrl(fileName)
+        
+        setFormData((prev) => ({ ...prev, photo_url: data.publicUrl }))
+        
+        // Stop camera stream
+        const stream = videoElement.srcObject as MediaStream
+        stream?.getTracks().forEach(track => track.stop())
+        setCameraActive(false)
+        alert('Live selfie verified & uploaded successfully!')
+      }, 'image/jpeg')
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -141,7 +222,7 @@ export default function CreateProfilePage() {
         <div className="flex justify-between items-center border-b border-slate-100 pb-4">
           <div>
             <span className="px-3 py-1 text-xs font-semibold uppercase tracking-wider text-rose-600 bg-rose-50 rounded-full border border-rose-100">
-              Comprehensive Biodata
+              Comprehensive Biodata & Verification
             </span>
             <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 mt-1">
               Create / Edit Profile
@@ -153,6 +234,57 @@ export default function CreateProfilePage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6 text-xs">
+          
+          {/* Profile Photo & Live Selfie Section */}
+          <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <h3 className="font-bold text-slate-900 text-sm">Profile Photo & Verified Selfie</h3>
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              {formData.photo_url ? (
+                <img src={formData.photo_url} alt="Profile Preview" className="w-20 h-20 rounded-full object-cover border-2 border-rose-500 shadow-sm" />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-slate-200 flex items-center justify-center text-slate-400 text-xs">
+                  No Photo
+                </div>
+              )}
+              
+              <div className="space-y-2 flex-1 w-full">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Upload Photo from Device</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-rose-50 file:text-rose-700 hover:file:bg-rose-100 cursor-pointer"
+                  />
+                  {uploading && <span className="text-rose-600 text-[10px]">Uploading photo...</span>}
+                </div>
+
+                <div className="pt-2 border-t border-slate-200">
+                  {!cameraActive ? (
+                    <button
+                      type="button"
+                      onClick={startCamera}
+                      className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-medium text-xs transition-all cursor-pointer"
+                    >
+                      📸 Take Live Selfie Verification
+                    </button>
+                  ) : (
+                    <div className="space-y-2">
+                      <video id="selfie-video" autoPlay playsInline className="w-full max-w-xs rounded-xl border border-slate-300"></video>
+                      <button
+                        type="button"
+                        onClick={captureSelfie}
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium text-xs transition-all cursor-pointer block"
+                      >
+                        Capture & Verify Selfie Now
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Basic Information */}
           <div className="space-y-3">
             <h3 className="font-bold text-slate-900 text-sm border-b pb-1">Basic Details & Contact</h3>
@@ -407,7 +539,7 @@ export default function CreateProfilePage() {
             </div>
           </div>
 
-          {/* Social Profiles (Optional) */}
+          {/* Social Profiles */}
           <div className="space-y-3">
             <h3 className="font-bold text-slate-900 text-sm border-b pb-1">Social Profiles (Optional)</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -457,7 +589,7 @@ export default function CreateProfilePage() {
                 rows={3}
                 value={formData.partner_preference}
                 onChange={handleChange}
-                className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
+                className="w-full px-3py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
                 placeholder="What qualities and preferences are you looking for in a partner?"
               />
             </div>
