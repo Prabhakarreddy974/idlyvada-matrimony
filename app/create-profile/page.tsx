@@ -5,6 +5,34 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
+const HEIGHT_OPTIONS = [
+  "4ft 5in / 134 cm",
+  "4ft 6in / 137 cm",
+  "4ft 7in / 140 cm",
+  "4ft 8in / 142 cm",
+  "4ft 9in / 144 cm",
+  "4ft 10in / 147 cm",
+  "4ft 11in / 150 cm",
+  "5ft / 152 cm",
+  "5ft 1in / 154 cm",
+  "5ft 2in / 157 cm",
+  "5ft 3in / 160 cm",
+  "5ft 4in / 162 cm",
+  "5ft 5in / 165 cm",
+  "5ft 6in / 168 cm",
+  "5ft 7in / 170 cm",
+  "5ft 8in / 172 cm",
+  "5ft 9in / 175 cm",
+  "5ft 10in / 177 cm",
+  "5ft 11in / 180 cm",
+  "6ft / 182 cm",
+  "6ft 1in / 185 cm",
+  "6ft 2in / 187 cm",
+  "6ft 3in / 190 cm",
+  "6ft 4in / 193 cm",
+  "6ft 5in / 195 cm"
+]
+
 export default function CreateProfilePage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -12,7 +40,7 @@ export default function CreateProfilePage() {
     full_name: '',
     gender: 'Male',
     date_of_birth: '',
-    height: '',
+    height: '5ft 6in / 168 cm',
     occupation: '',
     city: '',
     state: '',
@@ -51,7 +79,7 @@ export default function CreateProfilePage() {
           full_name: data.full_name || '',
           gender: data.gender || 'Male',
           date_of_birth: data.date_of_birth || '',
-          height: data.height || '',
+          height: data.height || '5ft 6in / 168 cm',
           occupation: data.occupation || '',
           city: data.city || '',
           state: data.state || '',
@@ -178,14 +206,16 @@ export default function CreateProfilePage() {
               </div>
               <div>
                 <label className="block text-slate-700 font-semibold mb-1">Height</label>
-                <input
-                  type="text"
+                <select
                   name="height"
                   value={formData.height}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
-                  placeholder="e.g. 5'6&quot;"
-                />
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 bg-white"
+                >
+                  {HEIGHT_OPTIONS.map((h) => (
+                    <option key={h} value={h}>{h}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-slate-700 font-semibold mb-1">Marital Status</label>
