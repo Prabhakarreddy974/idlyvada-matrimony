@@ -4,6 +4,14 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
+// Helper to calculate age from date of birth
+function calculateAge(dob: string) {
+  if (!dob) return ''
+  const diff = Date.now() - new Date(dob).getTime()
+  const ageDate = new Date(diff)
+  return Math.abs(ageDate.getUTCFullYear() - 1970)
+}
+
 export default function MatchesPage() {
   const [profiles, setProfiles] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -12,15 +20,16 @@ export default function MatchesPage() {
   useEffect(() => {
     async function fetchProfiles() {
       try {
-        // 1. Get current logged-in user session locally
         const { data: { session } } = await supabase.auth.getSession()
-        let currentUserGender = 'Male' // default fallback
+        let currentUserGender = 'Male'
+        let currentUserId = ''
 
         if (session?.user) {
+          currentUserId = session.user.id
           const { data: myProfile } = await supabase
             .from('profiles')
             .select('gender')
-            .eq('id', session.user.id)
+            .eq('id', currentUserId)
             .maybeSingle()
           
           if (myProfile?.gender) {
@@ -28,14 +37,13 @@ export default function MatchesPage() {
           }
         }
 
-        // 2. Target opposite gender for matchmaking
         const targetGender = currentUserGender === 'Male' ? 'Female' : 'Male'
 
-        // 3. Fetch opposite gender profiles
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('gender', targetGender)
+          .neq('id', currentUserId)
           .order('created_at', { ascending: false })
 
         if (data) {
@@ -56,7 +64,7 @@ export default function MatchesPage() {
 
   const filteredProfiles = profiles.filter(p => 
     p.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.present_location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.occupation?.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
@@ -93,43 +101,54 @@ export default function MatchesPage() {
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search by name, city, or occupation..."
+            placeholder="Search by name, location, or occupation..."
             className="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
           />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredProfiles.length === 0 ? (
-            <p className="text-sm text-slate-500 col-span-2 text-center py-8">No matching opposite-gender profiles found yet.</p>
+            <p className="text-sm text-slate-500 col-span-2 text-center py-8">No matching opposite-gender profiles found yet. Try creating or editing a profile with the opposite gender!</p>
           ) : (
-            filteredProfiles.map((profile) => (
-              <div key={profile.id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4 flex flex-col justify-between">
-                <div className="space-y-2">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="text-lg font-bold text-slate-900">{profile.full_name}</h3>
-                      <span className="text-[10px] font-mono text-slate-400">ID: {profile.id.slice(0, 8).toUpperCase()}</span>
+            filteredProfiles.map((profile) => {
+              const age = calculateAge(profile.date_of_birth)
+              return (
+                <div key={profile.id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4 flex flex-col justify-between">
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="text-lg font-bold text-slate-900">{profile.full_name}</h3>
+                        <span className="text-[10px] font-mono text-slate-400">ID: {profile.id.slice(0, 8).toUpperCase()}</span>
+                      </div>
+                      <span className="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-rose-50 text-rose-600">
+                        {profile.gender}
+                      </span>
                     </div>
-                    <span className="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-rose-50 text-rose-600">
-                      {profile.gender}
-                    </span>
-                  </div>
-                  <p className="text-xs font-medium text-slate-700">
-                    {profile.occupation} • {profile.city}, {profile.state}
-                  </p>
-                  <p className="text-xs text-slate-600 line-clamp-2">
-                    {profile.about_me || 'No description provided.'}
-                  </p>
-                </div>
 
-                <Link
-                  href={`/profile?id=${profile.id}`}
-                  className="w-full py-2 px-4 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-800 text-center font-medium text-xs transition-all block"
-                >
-                  View Full Biodata →
-                </Link>
-              </div>
-            ))
+                    {/* Explicit Preview Details: Age • Height • Occupation • Location */}
+                    <div className="text-xs font-medium text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-100 space-y-1">
+                      <p className="font-semibold text-slate-900">
+                        {age ? `${age} Yrs` : 'Age N/A'} {profile.height ? `• ${profile.height}` : ''} {profile.occupation ? `• ${profile.occupation}` : '• Occupation N/A'}
+                      </p>
+                      <p className="text-slate-500">
+                        📍 {profile.present_location || `${profile.city}, ${profile.state}` || 'Location not specified'}
+                      </p>
+                    </div>
+
+                    <p className="text-xs text-slate-600 line-clamp-2">
+                      {profile.about_me || 'No description provided.'}
+                    </p>
+                  </div>
+
+                  <Link
+                    href={`/profile?id=${profile.id}`}
+                    className="w-full py-2 px-4 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-800 text-center font-medium text-xs transition-all block"
+                  >
+                    View Full Biodata →
+                  </Link>
+                </div>
+              )
+            })
           )}
         </div>
       </div>
