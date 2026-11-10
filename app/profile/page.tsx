@@ -13,7 +13,28 @@ function ProfileContent() {
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [sendingInterest, setSendingInterest] = useState(false)
-  const [interestStatus, setInterestStatus] = useState<string | null>(null) // 'pending' | 'accepted' | 'rejected' | null
+  const [interestStatus, setInterestStatus] = useState<string | null>(null)
+  const [isBlurred, setIsBlurred] = useState(false)
+
+  // Anti-screenshot: Blur sensitive screen content when window loses focus or user switches tabs
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) setIsBlurred(true)
+      else setIsBlurred(false)
+    }
+    const handleBlur = () => setIsBlurred(true)
+    const handleFocus = () => setIsBlurred(false)
+
+    window.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('blur', handleBlur)
+    window.addEventListener('focus', handleFocus)
+
+    return () => {
+      window.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('blur', handleBlur)
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [])
 
   useEffect(() => {
     async function fetchProfileData() {
@@ -28,7 +49,6 @@ function ProfileContent() {
           setCurrentUser(session.user)
         }
 
-        // Fetch target profile
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
@@ -38,7 +58,6 @@ function ProfileContent() {
         if (data) setProfile(data)
         if (error) console.error('Supabase error:', error.message)
 
-        // Check if an interest/consent exists between current user and this profile
         if (session?.user && session.user.id !== id) {
           const { data: sentInterest } = await supabase
             .from('interests')
@@ -113,7 +132,6 @@ function ProfileContent() {
     )
   }
 
-  // Determine if viewing own profile or if interest is accepted
   const isOwner = currentUser?.id === profile.id
   const isConsentGranted = isOwner || interestStatus === 'accepted'
 
@@ -122,15 +140,23 @@ function ProfileContent() {
     : (profile.photo_url ? [profile.photo_url] : [])
 
   return (
-    <main className="min-h-screen bg-slate-50 py-12 px-4 flex items-center justify-center">
-      <div className="w-full max-w-2xl bg-white p-8 rounded-2xl shadow-xl border border-slate-100 space-y-6">
+    <main className={`min-h-screen bg-slate-50 py-12 px-4 flex items-center justify-center transition-all duration-300 ${isBlurred ? 'filter blur-2xl select-none' : ''}`}>
+      <div className="w-full max-w-2xl bg-white p-8 rounded-2xl shadow-xl border border-slate-100 space-y-6 relative overflow-hidden no-screenshot">
         
+        {/* Dynamic Watermark to deter screenshots */}
+        {currentUser && (
+          <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-5 overflow-hidden z-50">
+            <p className="text-slate-900 text-sm font-bold rotate-[-35deg] whitespace-nowrap">
+              CONFIDENTIAL • VIEWED BY {currentUser.email} • IDLYVADA MATRIMONY
+            </p>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex justify-between items-center border-b border-slate-100 pb-4">
           <div className="flex items-center gap-4">
-            {/* Photo Privacy: Only fully visible with consent */}
             {isConsentGranted && photosList.length > 0 ? (
-              <img src={photosList[0]} alt={profile.full_name} className="w-16 h-16 rounded-full object-cover border-2 border-rose-500 shadow-sm" />
+              <img src={photosList[0]} alt={profile.full_name} className="w-16 h-16 rounded-full object-cover border-2 border-rose-500 shadow-sm pointer-events-none" />
             ) : (
               <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 text-[10px] text-center p-1 border border-slate-200">
                 🔒 Photo Locked
@@ -185,14 +211,14 @@ function ProfileContent() {
           )}
         </div>
 
-        {/* Gallery Photos Section (Consent Gated) */}
+        {/* Gallery Photos Section */}
         <div className="space-y-2 text-xs">
           <h3 className="font-bold text-slate-800 uppercase tracking-wide text-[11px] text-rose-600">Photo Gallery</h3>
           {isConsentGranted ? (
             <div className="grid grid-cols-5 gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
               {photosList.length > 0 ? (
                 photosList.map((url: string, idx: number) => (
-                  <img key={idx} src={url} alt="Gallery" className="w-full h-20 rounded-lg object-cover border border-slate-300 shadow-sm" />
+                  <img key={idx} src={url} alt="Gallery" className="w-full h-20 rounded-lg object-cover border border-slate-300 shadow-sm pointer-events-none" />
                 ))
               ) : (
                 <p className="text-slate-400 col-span-5 text-center py-2">No photos uploaded.</p>
@@ -205,7 +231,7 @@ function ProfileContent() {
           )}
         </div>
 
-        {/* Public Personal & Professional Information (Visible to Everyone) */}
+        {/* Public Personal Information */}
         <div className="space-y-2 text-xs">
           <h3 className="font-bold text-slate-800 uppercase tracking-wide text-[11px] text-rose-600">Personal & Professional Information (Public)</h3>
           <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
