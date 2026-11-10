@@ -20,6 +20,7 @@ export default function CreateProfilePage() {
   const [uploading, setUploading] = useState(false)
   const [cameraActive, setCameraActive] = useState(false)
   const [verifying, setVerifying] = useState(false)
+  const [slotCameraIndex, setSlotCameraIndex] = useState<number | null>(null)
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -101,8 +102,8 @@ export default function CreateProfilePage() {
     setFormData({ ...formData, [e.target.name]: e.target.value })
   }
 
-  // Upload photos immediately without requiring prior verification
-  const handleMultipleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Upload from Gallery
+  const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     try {
       setUploading(true)
       if (!e.target.files || e.target.files.length === 0) return
@@ -117,7 +118,7 @@ export default function CreateProfilePage() {
       const newPhotoUrls: string[] = []
 
       for (const file of files) {
-        const fileExt = file.name.split('.').pop()
+        const fileExt = file.name.split('.').pop() || 'jpg'
         const fileName = `${Math.random()}.${fileExt}`
         const { error: uploadError } = await supabase.storage
           .from('avatars')
@@ -133,11 +134,61 @@ export default function CreateProfilePage() {
         ...prev,
         photos: [...prev.photos, ...newPhotoUrls]
       }))
-      alert('Photos uploaded and saved successfully!')
+      alert('Photo uploaded successfully!')
     } catch (error: any) {
-      alert('Error uploading images: ' + error.message)
+      alert('Error uploading image: ' + error.message)
     } finally {
       setUploading(false)
+    }
+  }
+
+  // Open Camera for a specific slot or general capture
+  const startSlotCamera = async () => {
+    if (formData.photos.length >= 5) {
+      alert('Maximum 5 photos allowed.')
+      return
+    }
+    setSlotCameraIndex(formData.photos.length)
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true })
+      const videoElement = document.getElementById('slot-camera-video') as HTMLVideoElement
+      if (videoElement) videoElement.srcObject = stream
+    } catch (err) {
+      alert('Unable to access camera. Please check permissions.')
+      setSlotCameraIndex(null)
+    }
+  }
+
+  const captureSlotPhoto = () => {
+    const videoElement = document.getElementById('slot-camera-video') as HTMLVideoElement
+    if (!videoElement) return
+
+    const canvas = document.createElement('canvas')
+    canvas.width = videoElement.videoWidth || 320
+    canvas.height = videoElement.videoHeight || 240
+    const ctx = canvas.getContext('2d')
+
+    if (ctx) {
+      ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height)
+      canvas.toBlob(async (blob) => {
+        if (!blob) return
+        const file = new File([blob], 'camera-capture.jpg', { type: 'image/jpeg' })
+        const fileName = `${Math.random()}.jpg`
+        
+        const { error } = await supabase.storage.from('avatars').upload(fileName, file, { contentType: 'image/jpeg' })
+        if (error) {
+          alert('Error saving photo: ' + error.message)
+          return
+        }
+
+        const { data } = supabase.storage.from('avatars').getPublicUrl(fileName)
+        setFormData((prev) => ({ ...prev, photos: [...prev.photos, data.publicUrl] }))
+
+        const stream = videoElement.srcObject as MediaStream
+        stream?.getTracks().forEach(track => track.stop())
+        setSlotCameraIndex(null)
+        alert('Photo captured from camera successfully!')
+      }, 'image/jpeg')
     }
   }
 
@@ -145,14 +196,14 @@ export default function CreateProfilePage() {
     setFormData((prev) => ({
       ...prev,
       photos: prev.photos.filter((_, idx) => idx !== indexToRemove),
-      // If primary photo is removed and no photos remain, reset verification badge
       is_verified: prev.photos.length <= 1 ? false : prev.is_verified
     }))
   }
 
-  const startCamera = async () => {
+  // Verification Camera Start
+  const startVerificationCamera = async () => {
     if (formData.photos.length === 0) {
-      alert('Please upload at least one photo before starting live face verification.')
+      alert('Please add at least one photo before running face verification.')
       return
     }
     setCameraActive(true)
@@ -161,11 +212,12 @@ export default function CreateProfilePage() {
       const videoElement = document.getElementById('selfie-video') as HTMLVideoElement
       if (videoElement) videoElement.srcObject = stream
     } catch (err) {
-      alert('Unable to access camera. Please check your browser permissions.')
+      alert('Unable to access camera.')
       setCameraActive(false)
     }
   }
 
+  // Relaxed & Accurate Facial Likeness Verification
   const captureAndVerifySelfie = () => {
     const videoElement = document.getElementById('selfie-video') as HTMLVideoElement
     if (!videoElement) return
@@ -186,7 +238,6 @@ export default function CreateProfilePage() {
         }
 
         const selfieUrl = URL.createObjectURL(blob)
-        
         const imgProfile = new Image()
         imgProfile.crossOrigin = 'anonymous'
         imgProfile.src = formData.photos[0]
@@ -221,10 +272,12 @@ export default function CreateProfilePage() {
             }
 
             const likenessScore = totalDiff / (64 * 64)
+            console.log("Likeness Score:", likenessScore)
 
-            if (likenessScore > 135) {
+            // Relaxed threshold (160) to prevent false rejections on valid photos & lighting differences
+            if (likenessScore > 160) {
               setVerifying(false)
-              alert('Verification Failed: Live selfie does not match the uploaded profile photo.')
+              alert('Verification Notice: The live selfie variance is too high. Please ensure good lighting and face the camera directly.')
               return
             }
 
@@ -303,12 +356,12 @@ export default function CreateProfilePage() {
             </select>
           </div>
 
-          {/* Photos & Unverified / Verified Status Section */}
+          {/* Photos Section with Gallery & Camera Options */}
           <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
             <div className="flex justify-between items-center">
               <div>
                 <h3 className="font-bold text-slate-900 text-sm">Photo Gallery (Up to 5 Photos)</h3>
-                <p className="text-[11px] text-slate-500">Upload photos freely; verify with a live selfie to get the Verified badge.</p>
+                <p className="text-[11px] text-slate-500">Upload from gallery or snap a live photo.</p>
               </div>
               <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full uppercase tracking-wider ${
                 formData.is_verified ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-amber-100 text-amber-800 border border-amber-200'
@@ -325,32 +378,72 @@ export default function CreateProfilePage() {
                   <button
                     type="button"
                     onClick={() => removePhoto(idx)}
-                    className="absolute top-1 right-1 bg-rose-600 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center opacity-90 hover:opacity-100 shadow"
+                    className="absolute top-1 right-1 bg-rose-600 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center shadow"
                   >
                     ✕
                   </button>
                 </div>
               ))}
-              {formData.photos.length < 5 && (
-                <label className="w-full h-20 rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 cursor-pointer hover:border-rose-500 bg-white">
-                  <span className="text-lg font-bold">+</span>
-                  <span className="text-[9px]">Add Photo</span>
-                  <input type="file" accept="image/*" onChange={handleMultipleFileUpload} className="hidden" />
-                </label>
-              )}
             </div>
-            {uploading && <p className="text-rose-600 text-[10px] font-medium">Uploading photos to storage...</p>}
+
+            {/* Add Photo Options (Gallery or Camera) */}
+            {formData.photos.length < 5 && (
+              <div className="flex gap-3 pt-2">
+                <label className="flex-1 py-2.5 px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-center font-medium text-xs cursor-pointer shadow-sm flex items-center justify-center gap-2">
+                  <span>📁 Upload from Gallery</span>
+                  <input type="file" accept="image/*" multiple onChange={handleGalleryUpload} className="hidden" />
+                </label>
+                <button
+                  type="button"
+                  onClick={startSlotCamera}
+                  className="flex-1 py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-center font-medium text-xs cursor-pointer shadow-sm"
+                >
+                  📸 Take Photo with Camera
+                </button>
+              </div>
+            )}
+
+            {uploading && <p className="text-rose-600 text-[10px] font-medium">Uploading photos...</p>}
+
+            {/* Slot Camera Modal / View */}
+            {slotCameraIndex !== null && (
+              <div className="space-y-2 p-3 bg-white rounded-xl border border-slate-300">
+                <p className="font-semibold text-slate-800">Snap photo for slot {slotCameraIndex + 1}:</p>
+                <video id="slot-camera-video" autoPlay playsInline className="w-full max-w-xs rounded-xl border border-slate-300"></video>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={captureSlotPhoto}
+                    className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-medium"
+                  >
+                    Capture & Save Photo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const videoElement = document.getElementById('slot-camera-video') as HTMLVideoElement
+                      const stream = videoElement?.srcObject as MediaStream
+                      stream?.getTracks().forEach(t => t.stop())
+                      setSlotCameraIndex(null)
+                    }}
+                    className="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl text-xs font-medium"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Live Selfie Verification Section */}
             <div className="pt-3 border-t border-slate-200 space-y-2">
-              <p className="text-slate-600 font-medium">Live Selfie Verification (Optional to remove Unverified status):</p>
+              <p className="text-slate-600 font-medium">Live Face Match Verification (Removes Unverified badge):</p>
               {!cameraActive ? (
                 <button
                   type="button"
-                  onClick={startCamera}
-                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-medium text-xs transition-all cursor-pointer shadow-sm"
+                  onClick={startVerificationCamera}
+                  className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-medium text-xs transition-all cursor-pointer shadow-sm"
                 >
-                  📸 Start Face Match Verification
+                  🔍 Start Face Verification Check
                 </button>
               ) : (
                 <div className="space-y-2">
