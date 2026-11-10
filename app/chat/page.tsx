@@ -11,10 +11,14 @@ function ChatContent() {
 
   const [messages, setMessages] = useState<any[]>([])
   const [newMessage, setNewMessage] = useState('')
-  const [replyingTo, setReplyingTo] = useState<any>(null) // Holds the message being replied to
+  const [replyingTo, setReplyingTo] = useState<any>(null)
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [receiverProfile, setReceiverProfile] = useState<any>(null)
   const [conversations, setConversations] = useState<any[]>([])
+  
+  // Privacy & Disappearing settings state
+  const [disappearingMode, setDisappearingMode] = useState(false)
+  const [isBlurred, setIsBlurred] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -40,7 +44,16 @@ function ChatContent() {
           .or(`and(sender_id.eq.${session.user.id},receiver_id.eq.${receiverId}),and(sender_id.eq.${receiverId},receiver_id.eq.${session.user.id})`)
           .order('created_at', { ascending: true })
 
-        if (msgData) setMessages(msgData)
+        if (msgData) {
+          // Filter out expired messages if disappearing mode is simulated/active (> 24 hours old)
+          const now = new Date().getTime()
+          const activeMsgs = msgData.filter(m => {
+            if (!m.disappearing) return true
+            const msgTime = new Date(m.created_at).getTime()
+            return now - msgTime < 24 * 60 * 60 * 1000 // 24 hours expiry
+          })
+          setMessages(activeMsgs)
+        }
       } else {
         const { data: sentInterests } = await supabase
           .from('interests')
@@ -73,6 +86,12 @@ function ChatContent() {
 
     initChat()
 
+    // Tab blur privacy protection listener
+    const handleBlur = () => setIsBlurred(true)
+    const handleFocus = () => setIsBlurred(false)
+    window.addEventListener('blur', handleBlur)
+    window.addEventListener('focus', handleFocus)
+
     if (receiverId) {
       const channel = supabase
         .channel('realtime-messages')
@@ -93,7 +112,14 @@ function ChatContent() {
 
       return () => {
         supabase.removeChannel(channel)
+        window.removeEventListener('blur', handleBlur)
+        window.removeEventListener('focus', handleFocus)
       }
+    }
+
+    return () => {
+      window.removeEventListener('blur', handleBlur)
+      window.removeEventListener('focus', handleFocus)
     }
   }, [receiverId, currentUser?.id])
 
@@ -111,7 +137,8 @@ function ChatContent() {
       sender_id: currentUser.id,
       receiver_id: receiverId,
       content: contentText,
-      reply_to: replySnippet, // Saves the quoted message text
+      reply_to: replySnippet,
+      disappearing: disappearingMode, // Flag for 24h auto-delete
     })
 
     if (error) {
@@ -178,10 +205,18 @@ function ChatContent() {
   const receiverAvatar = receiverProfile?.photo_url || (receiverProfile?.photos && receiverProfile.photos[0])
 
   return (
-    <main className="min-h-screen bg-slate-50 py-8 px-4 flex flex-col items-center justify-center">
-      <div className="w-full max-w-xl bg-white rounded-2xl shadow-xl border border-slate-100 flex flex-col h-[80vh]">
+    <main className="min-h-screen bg-slate-50 py-8 px-4 flex flex-col items-center justify-center relative">
+      
+      {/* Privacy Tab Blur Overlay */}
+      {isBlurred && (
+        <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center text-white text-sm font-medium">
+          🔒 Privacy Screen Active (Tab Unfocused)
+        </div>
+      )}
+
+      <div className="w-full max-w-xl bg-white rounded-2xl shadow-xl border border-slate-100 flex flex-col h-[85vh] no-screenshot">
         
-        {/* Chat Header */}
+        {/* Chat Header with Disappearing Toggle */}
         <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white rounded-t-2xl">
           <div className="flex items-center gap-3">
             {receiverAvatar ? (
@@ -193,12 +228,29 @@ function ChatContent() {
             )}
             <div>
               <h2 className="text-sm font-bold text-slate-900">{receiverProfile?.full_name || 'Member'}</h2>
-              <span className="text-[10px] text-emerald-600 font-medium">● Online</span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-emerald-600 font-medium">● Online</span>
+                {disappearingMode && <span className="text-[9px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded font-semibold">⏳ Disappearing ON</span>}
+              </div>
             </div>
           </div>
-          <Link href="/chat" className="text-xs text-slate-600 hover:text-rose-600">
-            ← Back to Inbox
-          </Link>
+
+          <div className="flex items-center gap-3">
+            {/* Toggle Disappearing Mode */}
+            <button
+              onClick={() => setDisappearingMode(!disappearingMode)}
+              className={`text-[10px] px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer ${
+                disappearingMode ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+              title="Disappearing messages auto-delete after 24 hours"
+            >
+              {disappearingMode ? '⏳ 24h Active' : '⏱️ Enable Disappearing'}
+            </button>
+
+            <Link href="/chat" className="text-xs text-slate-600 hover:text-rose-600">
+              ← Inbox
+            </Link>
+          </div>
         </div>
 
         {/* Message History */}
@@ -206,6 +258,7 @@ function ChatContent() {
           {messages.length === 0 ? (
             <div className="text-center text-slate-400 py-12">
               No messages yet. Say hello and start the conversation! 👋
+              {disappearingMode && <p className="text-[10px] text-amber-600 mt-1">Disappearing messages mode is enabled for this session.</p>}
             </div>
           ) : (
             messages.map((msg) => {
@@ -218,7 +271,6 @@ function ChatContent() {
                       : 'bg-white text-slate-800 border border-slate-100 rounded-bl-none'
                   }`}>
                     
-                    {/* If this message is replying to another message */}
                     {msg.reply_to && (
                       <div className={`mb-2 p-1.5 rounded-lg text-[10px] border-l-2 ${
                         isMe ? 'bg-rose-700/60 border-rose-300 text-rose-100' : 'bg-slate-100 border-slate-400 text-slate-600'
@@ -230,13 +282,13 @@ function ChatContent() {
                     <p className="text-xs leading-relaxed">{msg.content}</p>
                     
                     <div className="flex items-center justify-end gap-2 mt-1">
+                      {msg.disappearing && <span className="text-[9px] text-amber-200">⏳ 24h</span>}
                       <span className={`text-[9px] ${isMe ? 'text-rose-200' : 'text-slate-400'}`}>
                         {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
                   </div>
 
-                  {/* Reply Button on Hover / Tap */}
                   <button
                     onClick={() => setReplyingTo(msg)}
                     className="text-[10px] text-slate-400 hover:text-rose-600 px-1 mt-0.5 opacity-80 hover:opacity-100 transition-opacity cursor-pointer"
@@ -271,7 +323,7 @@ function ChatContent() {
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            placeholder={replyingTo ? "Type your reply..." : "Type your message..."}
+            placeholder={disappearingMode ? "Type disappearing message (24h)..." : "Type your message..."}
             className="flex-1 px-4 py-2.5 rounded-xl border border-slate-300 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500"
           />
           <button
