@@ -45,7 +45,6 @@ function ChatContent() {
           .order('created_at', { ascending: true })
 
         if (msgData) {
-          // Filter out expired messages if disappearing mode is simulated/active (> 24 hours old)
           const now = new Date().getTime()
           const activeMsgs = msgData.filter(m => {
             if (!m.disappearing) return true
@@ -104,7 +103,11 @@ function ChatContent() {
               (incoming.sender_id === receiverId && incoming.receiver_id === currentUser?.id) ||
               (incoming.sender_id === currentUser?.id && incoming.receiver_id === receiverId)
             ) {
-              setMessages((prev) => [...prev, incoming])
+              setMessages((prev) => {
+                // Prevent duplicate entries if already added optimistically
+                if (prev.some(m => m.id === incoming.id)) return prev
+                return [...prev, incoming]
+              })
             }
           }
         )
@@ -129,16 +132,31 @@ function ChatContent() {
 
     const contentText = newMessage.trim()
     const replySnippet = replyingTo ? replyingTo.content : null
+    const isDisappearing = disappearingMode
     
     setNewMessage('')
     setReplyingTo(null)
 
+    // 1. Optimistically append message to state instantly
+    const tempMsg = {
+      id: 'temp-' + Date.now(),
+      sender_id: currentUser.id,
+      receiver_id: receiverId,
+      content: contentText,
+      reply_to: replySnippet,
+      disappearing: isDisappearing,
+      created_at: new Date().toISOString()
+    }
+
+    setMessages((prev) => [...prev, tempMsg])
+
+    // 2. Insert into Supabase database
     const { error } = await supabase.from('messages').insert({
       sender_id: currentUser.id,
       receiver_id: receiverId,
       content: contentText,
       reply_to: replySnippet,
-      disappearing: disappearingMode, // Flag for 24h auto-delete
+      disappearing: isDisappearing,
     })
 
     if (error) {
@@ -216,7 +234,7 @@ function ChatContent() {
 
       <div className="w-full max-w-xl bg-white rounded-2xl shadow-xl border border-slate-100 flex flex-col h-[85vh] no-screenshot">
         
-        {/* Chat Header with Disappearing Toggle */}
+        {/* Chat Header */}
         <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white rounded-t-2xl">
           <div className="flex items-center gap-3">
             {receiverAvatar ? (
@@ -236,7 +254,6 @@ function ChatContent() {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Toggle Disappearing Mode */}
             <button
               onClick={() => setDisappearingMode(!disappearingMode)}
               className={`text-[10px] px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer ${
