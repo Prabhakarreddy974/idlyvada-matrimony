@@ -10,42 +10,53 @@ function ProfileContent() {
   const id = searchParams.get('id')
 
   const [profile, setProfile] = useState<any>(null)
+  const [currentUser, setCurrentUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [sendingInterest, setSendingInterest] = useState(false)
-  const [interestSent, setInterestSent] = useState(false)
+  const [interestStatus, setInterestStatus] = useState<string | null>(null) // 'pending' | 'accepted' | 'rejected' | null
 
   useEffect(() => {
-    async function fetchProfile() {
+    async function fetchProfileData() {
       if (!id) {
         setLoading(false)
         return
       }
 
       try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.user) {
+          setCurrentUser(session.user)
+        }
+
+        // Fetch target profile
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', id)
           .maybeSingle()
 
-        if (data) {
-          setProfile(data)
-        }
-        if (error) {
-          console.error('Supabase error:', error.message)
-        }
+        if (data) setProfile(data)
+        if (error) console.error('Supabase error:', error.message)
 
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session?.user) {
-          const { data: existingInterest } = await supabase
+        // Check if an interest/consent exists between current user and this profile
+        if (session?.user && session.user.id !== id) {
+          const { data: sentInterest } = await supabase
             .from('interests')
-            .select('id')
+            .select('status')
             .eq('sender_id', session.user.id)
             .eq('receiver_id', id)
             .maybeSingle()
 
-          if (existingInterest) {
-            setInterestSent(true)
+          if (sentInterest) {
+            setInterestStatus(sentInterest.status)
+          } else {
+            const { data: receivedInterest } = await supabase
+              .from('interests')
+              .select('status')
+              .eq('sender_id', id)
+              .eq('receiver_id', session.user.id)
+              .maybeSingle()
+            if (receivedInterest) setInterestStatus(receivedInterest.status)
           }
         }
       } catch (err) {
@@ -55,24 +66,23 @@ function ProfileContent() {
       }
     }
 
-    fetchProfile()
+    fetchProfileData()
   }, [id])
 
   const handleSendInterest = async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.user) {
+    if (!currentUser) {
       alert('Please log in to send an interest.')
       return
     }
 
-    if (session.user.id === id) {
+    if (currentUser.id === id) {
       alert("You cannot send an interest to your own profile.")
       return
     }
 
     setSendingInterest(true)
     const { error } = await supabase.from('interests').insert({
-      sender_id: session.user.id,
+      sender_id: currentUser.id,
       receiver_id: id,
       status: 'pending'
     })
@@ -80,8 +90,8 @@ function ProfileContent() {
     if (error) {
       alert('Error sending interest or already sent: ' + error.message)
     } else {
-      setInterestSent(true)
-      alert('Interest sent successfully!')
+      setInterestStatus('pending')
+      alert('Interest sent successfully! Awaiting consent acceptance.')
     }
     setSendingInterest(false)
   }
@@ -103,28 +113,35 @@ function ProfileContent() {
     )
   }
 
+  // Determine if viewing own profile or if interest is accepted
+  const isOwner = currentUser?.id === profile.id
+  const isConsentGranted = isOwner || interestStatus === 'accepted'
+
+  const photosList = profile.photos && profile.photos.length > 0 
+    ? profile.photos 
+    : (profile.photo_url ? [profile.photo_url] : [])
+
   return (
     <main className="min-h-screen bg-slate-50 py-12 px-4 flex items-center justify-center">
       <div className="w-full max-w-2xl bg-white p-8 rounded-2xl shadow-xl border border-slate-100 space-y-6">
         
-        {/* Header with Photo & Name */}
+        {/* Header */}
         <div className="flex justify-between items-center border-b border-slate-100 pb-4">
           <div className="flex items-center gap-4">
-            {profile.photo_url ? (
-              <img 
-                src={profile.photo_url} 
-                alt={profile.full_name} 
-                className="w-16 h-16 rounded-full object-cover border-2 border-rose-500 shadow-sm" 
-              />
+            {/* Photo Privacy: Only fully visible with consent */}
+            {isConsentGranted && photosList.length > 0 ? (
+              <img src={photosList[0]} alt={profile.full_name} className="w-16 h-16 rounded-full object-cover border-2 border-rose-500 shadow-sm" />
             ) : (
-              <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 text-sm font-bold border border-slate-200">
-                {profile.full_name?.charAt(0) || 'U'}
+              <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 text-[10px] text-center p-1 border border-slate-200">
+                🔒 Photo Locked
               </div>
             )}
             <div>
-              <span className="px-3 py-1 text-xs font-semibold uppercase tracking-wider text-rose-600 bg-rose-50 rounded-full border border-rose-100">
-                Verified Biodata
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1 text-xs font-semibold uppercase tracking-wider text-rose-600 bg-rose-50 rounded-full border border-rose-100">
+                  {profile.is_verified ? 'Verified Biodata ✓' : 'Biodata'}
+                </span>
+              </div>
               <div className="flex items-center gap-2 mt-1">
                 <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">
                   {profile.full_name}
@@ -135,34 +152,62 @@ function ProfileContent() {
               </div>
             </div>
           </div>
-          <Link
-            href="/matches"
-            className="text-xs font-medium text-slate-600 hover:text-rose-600 transition-colors"
-          >
+          <Link href="/matches" className="text-xs font-medium text-slate-600 hover:text-rose-600 transition-colors">
             ← Back to Matches
           </Link>
         </div>
 
+        {/* Contact & Consent Box */}
         <div className="bg-rose-50 border border-rose-100 p-4 rounded-xl flex justify-between items-center text-xs">
           <div>
-            <span className="text-rose-700 font-semibold block uppercase tracking-wider">Connect With Member</span>
-            <strong className="text-slate-900 text-sm font-mono">{profile.mobile_number || 'Contact Protected'}</strong>
+            <span className="text-rose-700 font-semibold block uppercase tracking-wider">Mobile Number (Consent Required)</span>
+            {isConsentGranted ? (
+              <strong className="text-slate-900 text-sm font-mono">{profile.mobile_number || 'Not Provided'}</strong>
+            ) : (
+              <span className="text-slate-500 italic">🔒 Locked. Send interest & get acceptance to view phone number and photos.</span>
+            )}
           </div>
-          <button
-            onClick={handleSendInterest}
-            disabled={sendingInterest || interestSent}
-            className={`px-5 py-2.5 rounded-xl font-medium text-xs shadow-sm transition-all ${
-              interestSent 
-                ? 'bg-emerald-600 text-white cursor-default' 
-                : 'bg-rose-600 hover:bg-rose-700 text-white cursor-pointer'
-            }`}
-          >
-            {interestSent ? 'Interest Sent ✓' : sendingInterest ? 'Sending...' : '❤️ Send Interest'}
-          </button>
+
+          {!isOwner && (
+            <button
+              onClick={handleSendInterest}
+              disabled={sendingInterest || interestStatus === 'pending' || interestStatus === 'accepted'}
+              className={`px-5 py-2.5 rounded-xl font-medium text-xs shadow-sm transition-all ${
+                interestStatus === 'accepted' ? 'bg-emerald-600 text-white cursor-default' :
+                interestStatus === 'pending' ? 'bg-amber-500 text-white cursor-default' :
+                'bg-rose-600 hover:bg-rose-700 text-white cursor-pointer'
+              }`}
+            >
+              {interestStatus === 'accepted' ? 'Connected ✓' :
+               interestStatus === 'pending' ? 'Interest Pending ⏳' :
+               sendingInterest ? 'Sending...' : '❤️ Send Interest'}
+            </button>
+          )}
         </div>
 
+        {/* Gallery Photos Section (Consent Gated) */}
         <div className="space-y-2 text-xs">
-          <h3 className="font-bold text-slate-800 uppercase tracking-wide text-[11px] text-rose-600">Personal & Professional Information</h3>
+          <h3 className="font-bold text-slate-800 uppercase tracking-wide text-[11px] text-rose-600">Photo Gallery</h3>
+          {isConsentGranted ? (
+            <div className="grid grid-cols-5 gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
+              {photosList.length > 0 ? (
+                photosList.map((url: string, idx: number) => (
+                  <img key={idx} src={url} alt="Gallery" className="w-full h-20 rounded-lg object-cover border border-slate-300 shadow-sm" />
+                ))
+              ) : (
+                <p className="text-slate-400 col-span-5 text-center py-2">No photos uploaded.</p>
+              )}
+            </div>
+          ) : (
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-center text-slate-500 italic">
+              🔒 Photos are locked. Accept or receive an accepted interest to view member photos.
+            </div>
+          )}
+        </div>
+
+        {/* Public Personal & Professional Information (Visible to Everyone) */}
+        <div className="space-y-2 text-xs">
+          <h3 className="font-bold text-slate-800 uppercase tracking-wide text-[11px] text-rose-600">Personal & Professional Information (Public)</h3>
           <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
             <div>
               <span className="text-slate-500 block">Gender & Status</span>
@@ -177,7 +222,7 @@ function ProfileContent() {
               <strong className="text-slate-900 text-sm">{profile.occupation || 'Not Specified'}</strong>
             </div>
             <div>
-              <span className="text-slate-500 block">Present Location (Lives In)</span>
+              <span className="text-slate-500 block">Present Location</span>
               <strong className="text-slate-900 text-sm">{profile.present_location || 'Not Specified'}</strong>
             </div>
             <div>
@@ -191,8 +236,9 @@ function ProfileContent() {
           </div>
         </div>
 
+        {/* Public Religious Information */}
         <div className="space-y-2 text-xs">
-          <h3 className="font-bold text-slate-800 uppercase tracking-wide text-[11px] text-rose-600">Religious Information</h3>
+          <h3 className="font-bold text-slate-800 uppercase tracking-wide text-[11px] text-rose-600">Religious Information (Public)</h3>
           <div className="grid grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
             <div>
               <span className="text-slate-500 block">Caste</span>
@@ -209,8 +255,9 @@ function ProfileContent() {
           </div>
         </div>
 
+        {/* Public Lifestyle & Family Details */}
         <div className="space-y-2 text-xs">
-          <h3 className="font-bold text-slate-800 uppercase tracking-wide text-[11px] text-rose-600">Lifestyle & Family Details</h3>
+          <h3 className="font-bold text-slate-800 uppercase tracking-wide text-[11px] text-rose-600">Lifestyle & Family Details (Public)</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
             <div>
               <span className="text-slate-500 block">Eating Habits</span>
@@ -235,44 +282,17 @@ function ProfileContent() {
           </div>
         </div>
 
-        {(profile.instagram || profile.linked_in) && (
-          <div className="space-y-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-600">Social Profiles</h3>
-            <div className="flex flex-wrap gap-3">
-              {profile.instagram && (
-                <a
-                  href={profile.instagram.startsWith('http') ? profile.instagram : `https://${profile.instagram}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-4 py-2 rounded-xl bg-pink-50 text-pink-600 hover:bg-pink-100 font-medium text-xs border border-pink-100 transition-all flex items-center gap-2"
-                >
-                  📸 Instagram Profile →
-                </a>
-              )}
-              {profile.linked_in && (
-                <a
-                  href={profile.linked_in.startsWith('http') ? profile.linked_in : `https://${profile.linked_in}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-4 py-2 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 font-medium text-xs border border-blue-100 transition-all flex items-center gap-2"
-                >
-                  💼 LinkedIn Profile →
-                </a>
-              )}
-            </div>
-          </div>
-        )}
-
+        {/* Public Bio & Partner Preferences */}
         <div className="space-y-4">
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">About Me</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">About Me (Public)</h3>
             <p className="text-sm text-slate-700 bg-white p-3 rounded-lg border border-slate-200">
               {profile.about_me || 'No information provided.'}
             </p>
           </div>
 
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Partner Preferences</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Partner Preferences (Public)</h3>
             <p className="text-sm text-slate-700 bg-white p-3 rounded-lg border border-slate-200">
               {profile.partner_preference || 'No preferences specified.'}
             </p>
