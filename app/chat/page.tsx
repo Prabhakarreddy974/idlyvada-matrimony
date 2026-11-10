@@ -11,6 +11,7 @@ function ChatContent() {
 
   const [messages, setMessages] = useState<any[]>([])
   const [newMessage, setNewMessage] = useState('')
+  const [replyingTo, setReplyingTo] = useState<any>(null) // Holds the message being replied to
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [receiverProfile, setReceiverProfile] = useState<any>(null)
   const [conversations, setConversations] = useState<any[]>([])
@@ -26,7 +27,6 @@ function ChatContent() {
       setCurrentUser(session.user)
 
       if (receiverId) {
-        // Fetch receiver's profile info
         const { data: profileData } = await supabase
           .from('profiles')
           .select('id, full_name, photo_url, photos')
@@ -34,7 +34,6 @@ function ChatContent() {
           .maybeSingle()
         if (profileData) setReceiverProfile(profileData)
 
-        // Fetch existing messages between current user and receiver
         const { data: msgData } = await supabase
           .from('messages')
           .select('*')
@@ -43,7 +42,6 @@ function ChatContent() {
 
         if (msgData) setMessages(msgData)
       } else {
-        // Fetch accepted interests/connections to show in the inbox list
         const { data: sentInterests } = await supabase
           .from('interests')
           .select('receiver_id')
@@ -75,7 +73,6 @@ function ChatContent() {
 
     initChat()
 
-    // Subscribe to real-time incoming messages if chatting with someone
     if (receiverId) {
       const channel = supabase
         .channel('realtime-messages')
@@ -105,12 +102,16 @@ function ChatContent() {
     if (!newMessage.trim() || !currentUser || !receiverId) return
 
     const contentText = newMessage.trim()
+    const replySnippet = replyingTo ? replyingTo.content : null
+    
     setNewMessage('')
+    setReplyingTo(null)
 
     const { error } = await supabase.from('messages').insert({
       sender_id: currentUser.id,
       receiver_id: receiverId,
       content: contentText,
+      reply_to: replySnippet, // Saves the quoted message text
     })
 
     if (error) {
@@ -126,7 +127,6 @@ function ChatContent() {
     )
   }
 
-  // If no recipient is selected, show the Conversations Inbox
   if (!receiverId) {
     return (
       <main className="min-h-screen bg-slate-50 py-12 px-4 flex items-center justify-center">
@@ -175,7 +175,6 @@ function ChatContent() {
     )
   }
 
-  // Active Chat Screen with selected recipient
   const receiverAvatar = receiverProfile?.photo_url || (receiverProfile?.photos && receiverProfile.photos[0])
 
   return (
@@ -212,22 +211,59 @@ function ChatContent() {
             messages.map((msg) => {
               const isMe = msg.sender_id === currentUser?.id
               return (
-                <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[75%] px-4 py-2.5 rounded-2xl shadow-sm ${
+                <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+                  <div className={`max-w-[75%] px-4 py-2.5 rounded-2xl shadow-sm relative group ${
                     isMe 
                       ? 'bg-rose-600 text-white rounded-br-none' 
                       : 'bg-white text-slate-800 border border-slate-100 rounded-bl-none'
                   }`}>
+                    
+                    {/* If this message is replying to another message */}
+                    {msg.reply_to && (
+                      <div className={`mb-2 p-1.5 rounded-lg text-[10px] border-l-2 ${
+                        isMe ? 'bg-rose-700/60 border-rose-300 text-rose-100' : 'bg-slate-100 border-slate-400 text-slate-600'
+                      }`}>
+                        <p className="truncate">↳ {msg.reply_to}</p>
+                      </div>
+                    )}
+
                     <p className="text-xs leading-relaxed">{msg.content}</p>
-                    <span className={`text-[9px] block mt-1 text-right ${isMe ? 'text-rose-200' : 'text-slate-400'}`}>
-                      {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
+                    
+                    <div className="flex items-center justify-end gap-2 mt-1">
+                      <span className={`text-[9px] ${isMe ? 'text-rose-200' : 'text-slate-400'}`}>
+                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
                   </div>
+
+                  {/* Reply Button on Hover / Tap */}
+                  <button
+                    onClick={() => setReplyingTo(msg)}
+                    className="text-[10px] text-slate-400 hover:text-rose-600 px-1 mt-0.5 opacity-80 hover:opacity-100 transition-opacity cursor-pointer"
+                  >
+                    ↩ Reply
+                  </button>
                 </div>
               )
             })
           )}
         </div>
+
+        {/* Active Reply Preview Banner */}
+        {replyingTo && (
+          <div className="px-4 py-2 bg-slate-100 border-t border-slate-200 flex items-center justify-between text-xs text-slate-700">
+            <div className="truncate pr-2">
+              <span className="font-semibold text-rose-600 mr-1">Replying to:</span> 
+              <span className="italic truncate">{replyingTo.content}</span>
+            </div>
+            <button 
+              onClick={() => setReplyingTo(null)}
+              className="text-slate-400 hover:text-slate-700 font-bold px-1 text-sm cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
         {/* Message Input Box */}
         <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-100 bg-white rounded-b-2xl flex gap-2">
@@ -235,7 +271,7 @@ function ChatContent() {
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Type your message..."
+            placeholder={replyingTo ? "Type your reply..." : "Type your message..."}
             className="flex-1 px-4 py-2.5 rounded-xl border border-slate-300 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500"
           />
           <button
