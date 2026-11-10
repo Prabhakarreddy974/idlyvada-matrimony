@@ -101,6 +101,7 @@ export default function CreateProfilePage() {
     setFormData({ ...formData, [e.target.name]: e.target.value })
   }
 
+  // Upload photos immediately without requiring prior verification
   const handleMultipleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     try {
       setUploading(true)
@@ -118,7 +119,10 @@ export default function CreateProfilePage() {
       for (const file of files) {
         const fileExt = file.name.split('.').pop()
         const fileName = `${Math.random()}.${fileExt}`
-        const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, file)
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(fileName, file, { contentType: file.type || 'image/jpeg' })
+
         if (uploadError) throw uploadError
 
         const { data } = supabase.storage.from('avatars').getPublicUrl(fileName)
@@ -129,7 +133,7 @@ export default function CreateProfilePage() {
         ...prev,
         photos: [...prev.photos, ...newPhotoUrls]
       }))
-      alert('Photos uploaded successfully!')
+      alert('Photos uploaded and saved successfully!')
     } catch (error: any) {
       alert('Error uploading images: ' + error.message)
     } finally {
@@ -140,13 +144,15 @@ export default function CreateProfilePage() {
   const removePhoto = (indexToRemove: number) => {
     setFormData((prev) => ({
       ...prev,
-      photos: prev.photos.filter((_, idx) => idx !== indexToRemove)
+      photos: prev.photos.filter((_, idx) => idx !== indexToRemove),
+      // If primary photo is removed and no photos remain, reset verification badge
+      is_verified: prev.photos.length <= 1 ? false : prev.is_verified
     }))
   }
 
   const startCamera = async () => {
     if (formData.photos.length === 0) {
-      alert('Please upload at least one profile photo first before running live selfie verification!')
+      alert('Please upload at least one photo before starting live face verification.')
       return
     }
     setCameraActive(true)
@@ -163,11 +169,6 @@ export default function CreateProfilePage() {
   const captureAndVerifySelfie = () => {
     const videoElement = document.getElementById('selfie-video') as HTMLVideoElement
     if (!videoElement) return
-
-    if (formData.photos.length === 0) {
-      alert('Please upload at least one profile photo first before verifying.')
-      return
-    }
 
     setVerifying(true)
     const canvas = document.createElement('canvas')
@@ -221,22 +222,22 @@ export default function CreateProfilePage() {
 
             const likenessScore = totalDiff / (64 * 64)
 
-            if (likenessScore > 125) {
+            if (likenessScore > 135) {
               setVerifying(false)
-              alert('Verification Failed: The live selfie does not match the uploaded profile photo. Please ensure you are taking a live selfie of the person in the photo.')
+              alert('Verification Failed: Live selfie does not match the uploaded profile photo.')
               return
             }
 
             const file = new File([blob], 'live-selfie.jpg', { type: 'image/jpeg' })
             const fileName = `selfie-${Math.random()}.jpg`
-            await supabase.storage.from('avatars').upload(fileName, file)
+            await supabase.storage.from('avatars').upload(fileName, file, { contentType: 'image/jpeg' })
 
             setFormData((prev) => ({ ...prev, is_verified: true }))
             const stream = videoElement.srcObject as MediaStream
             stream?.getTracks().forEach(track => track.stop())
             setCameraActive(false)
             setVerifying(false)
-            alert('Facial Likeness Verified Successfully! Profile is now Verified ✓')
+            alert('Facial Likeness Verified! Your profile is now Verified ✓')
           }
         }
       }, 'image/jpeg')
@@ -302,22 +303,29 @@ export default function CreateProfilePage() {
             </select>
           </div>
 
+          {/* Photos & Unverified / Verified Status Section */}
           <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
             <div className="flex justify-between items-center">
-              <h3 className="font-bold text-slate-900 text-sm">Photos (Up to 5) & Face Verification</h3>
-              <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${formData.is_verified ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                {formData.is_verified ? '✓ Verified Profile' : 'Not Verified'}
+              <div>
+                <h3 className="font-bold text-slate-900 text-sm">Photo Gallery (Up to 5 Photos)</h3>
+                <p className="text-[11px] text-slate-500">Upload photos freely; verify with a live selfie to get the Verified badge.</p>
+              </div>
+              <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full uppercase tracking-wider ${
+                formData.is_verified ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-amber-100 text-amber-800 border border-amber-200'
+              }`}>
+                {formData.is_verified ? '✓ Verified Profile' : '⚠️ Unverified Profile'}
               </span>
             </div>
 
-            <div className="grid grid-cols-5 gap-2">
+            {/* Photo Previews */}
+            <div className="grid grid-cols-5 gap-2 pt-2">
               {formData.photos.map((url, idx) => (
                 <div key={idx} className="relative group">
-                  <img src={url} alt={`Upload ${idx + 1}`} className="w-full h-20 rounded-xl object-cover border border-slate-300" />
+                  <img src={url} alt={`Upload ${idx + 1}`} className="w-full h-20 rounded-xl object-cover border border-slate-300 shadow-sm" />
                   <button
                     type="button"
                     onClick={() => removePhoto(idx)}
-                    className="absolute top-1 right-1 bg-rose-600 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center opacity-80 hover:opacity-100"
+                    className="absolute top-1 right-1 bg-rose-600 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center opacity-90 hover:opacity-100 shadow"
                   >
                     ✕
                   </button>
@@ -325,32 +333,33 @@ export default function CreateProfilePage() {
               ))}
               {formData.photos.length < 5 && (
                 <label className="w-full h-20 rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 cursor-pointer hover:border-rose-500 bg-white">
-                  <span className="text-lg">+</span>
+                  <span className="text-lg font-bold">+</span>
                   <span className="text-[9px]">Add Photo</span>
                   <input type="file" accept="image/*" onChange={handleMultipleFileUpload} className="hidden" />
                 </label>
               )}
             </div>
-            {uploading && <p className="text-rose-600 text-[10px]">Uploading photos...</p>}
+            {uploading && <p className="text-rose-600 text-[10px] font-medium">Uploading photos to storage...</p>}
 
+            {/* Live Selfie Verification Section */}
             <div className="pt-3 border-t border-slate-200 space-y-2">
-              <p className="text-slate-600">Take a live selfie to match against your uploaded photo and get a verified badge:</p>
+              <p className="text-slate-600 font-medium">Live Selfie Verification (Optional to remove Unverified status):</p>
               {!cameraActive ? (
                 <button
                   type="button"
                   onClick={startCamera}
-                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-medium text-xs transition-all cursor-pointer"
+                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-medium text-xs transition-all cursor-pointer shadow-sm"
                 >
                   📸 Start Face Match Verification
                 </button>
               ) : (
                 <div className="space-y-2">
-                  <video id="selfie-video" autoPlay playsInline className="w-full max-w-xs rounded-xl border border-slate-300"></video>
+                  <video id="selfie-video" autoPlay playsInline className="w-full max-w-xs rounded-xl border border-slate-300 shadow-sm"></video>
                   <button
                     type="button"
                     onClick={captureAndVerifySelfie}
                     disabled={verifying}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium text-xs transition-all cursor-pointer block"
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium text-xs transition-all cursor-pointer block shadow-sm"
                   >
                     {verifying ? 'Analyzing facial likeness...' : 'Capture & Verify Face Match'}
                   </button>
