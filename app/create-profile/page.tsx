@@ -6,31 +6,12 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 const HEIGHT_OPTIONS = [
-  "4ft 5in / 134 cm",
-  "4ft 6in / 137 cm",
-  "4ft 7in / 140 cm",
-  "4ft 8in / 142 cm",
-  "4ft 9in / 144 cm",
-  "4ft 10in / 147 cm",
-  "4ft 11in / 150 cm",
-  "5ft / 152 cm",
-  "5ft 1in / 154 cm",
-  "5ft 2in / 157 cm",
-  "5ft 3in / 160 cm",
-  "5ft 4in / 162 cm",
-  "5ft 5in / 165 cm",
-  "5ft 6in / 168 cm",
-  "5ft 7in / 170 cm",
-  "5ft 8in / 172 cm",
-  "5ft 9in / 175 cm",
-  "5ft 10in / 177 cm",
-  "5ft 11in / 180 cm",
-  "6ft / 182 cm",
-  "6ft 1in / 185 cm",
-  "6ft 2in / 187 cm",
-  "6ft 3in / 190 cm",
-  "6ft 4in / 193 cm",
-  "6ft 5in / 195 cm"
+  "4ft 5in / 134 cm", "4ft 6in / 137 cm", "4ft 7in / 140 cm", "4ft 8in / 142 cm",
+  "4ft 9in / 144 cm", "4ft 10in / 147 cm", "4ft 11in / 150 cm", "5ft / 152 cm",
+  "5ft 1in / 154 cm", "5ft 2in / 157 cm", "5ft 3in / 160 cm", "5ft 4in / 162 cm",
+  "5ft 5in / 165 cm", "5ft 6in / 168 cm", "5ft 7in / 170 cm", "5ft 8in / 172 cm",
+  "5ft 9in / 175 cm", "5ft 10in / 177 cm", "5ft 11in / 180 cm", "6ft / 182 cm",
+  "6ft 1in / 185 cm", "6ft 2in / 187 cm", "6ft 3in / 190 cm", "6ft 4in / 193 cm", "6ft 5in / 195 cm"
 ]
 
 export default function CreateProfilePage() {
@@ -65,6 +46,7 @@ export default function CreateProfilePage() {
     family_status: 'Middle Class',
     father_occupation: '',
     photo_url: '',
+    profile_visibility: 'public', // Added privacy setting
   })
 
   useEffect(() => {
@@ -105,6 +87,7 @@ export default function CreateProfilePage() {
           family_status: data.family_status || 'Middle Class',
           father_occupation: data.father_occupation || '',
           photo_url: data.photo_url || '',
+          profile_visibility: data.profile_visibility || 'public',
         })
       }
     }
@@ -115,7 +98,6 @@ export default function CreateProfilePage() {
     setFormData({ ...formData, [e.target.name]: e.target.value })
   }
 
-  // Handle standard photo upload from file picker
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     try {
       setUploading(true)
@@ -124,10 +106,7 @@ export default function CreateProfilePage() {
       const fileExt = file.name.split('.').pop()
       const fileName = `${Math.random()}.${fileExt}`
 
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(fileName, file)
-
+      const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, file)
       if (uploadError) throw uploadError
 
       const { data } = supabase.storage.from('avatars').getPublicUrl(fileName)
@@ -140,22 +119,18 @@ export default function CreateProfilePage() {
     }
   }
 
-  // Start browser camera for live selfie verification
   const startCamera = async () => {
     setCameraActive(true)
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true })
       const videoElement = document.getElementById('selfie-video') as HTMLVideoElement
-      if (videoElement) {
-        videoElement.srcObject = stream
-      }
+      if (videoElement) videoElement.srcObject = stream
     } catch (err) {
       alert('Unable to access camera. Please check your browser permissions.')
       setCameraActive(false)
     }
   }
 
-  // Capture frame from webcam and upload as live selfie
   const captureSelfie = () => {
     const videoElement = document.getElementById('selfie-video') as HTMLVideoElement
     if (!videoElement) return
@@ -169,7 +144,6 @@ export default function CreateProfilePage() {
       canvas.toBlob(async (blob) => {
         if (!blob) return
         const file = new File([blob], 'live-selfie.jpg', { type: 'image/jpeg' })
-        
         const fileName = `selfie-${Math.random()}.jpg`
         const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, file)
         
@@ -179,10 +153,8 @@ export default function CreateProfilePage() {
         }
 
         const { data } = supabase.storage.from('avatars').getPublicUrl(fileName)
-        
         setFormData((prev) => ({ ...prev, photo_url: data.publicUrl }))
         
-        // Stop camera stream
         const stream = videoElement.srcObject as MediaStream
         stream?.getTracks().forEach(track => track.stop())
         setCameraActive(false)
@@ -235,6 +207,24 @@ export default function CreateProfilePage() {
 
         <form onSubmit={handleSubmit} className="space-y-6 text-xs">
           
+          {/* Privacy Settings Section */}
+          <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <h3 className="font-bold text-slate-900 text-sm">🔒 Privacy & Visibility Settings</h3>
+            <div>
+              <label className="block text-slate-700 font-semibold mb-1">Who can view my full profile & photos?</label>
+              <select
+                name="profile_visibility"
+                value={formData.profile_visibility}
+                onChange={handleChange}
+                className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 bg-white"
+              >
+                <option value="public">Public (Visible to all compatible matches)</option>
+                <option value="connections_only">Connections Only (Visible only after Interest is Accepted)</option>
+                <option value="hidden">Hidden / Paused (Hide me completely from matches feed)</option>
+              </select>
+            </div>
+          </div>
+
           {/* Profile Photo & Live Selfie Section */}
           <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
             <h3 className="font-bold text-slate-900 text-sm">Profile Photo & Verified Selfie</h3>
@@ -298,7 +288,6 @@ export default function CreateProfilePage() {
                   value={formData.full_name}
                   onChange={handleChange}
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
-                  placeholder="Full name"
                 />
               </div>
               <div>
@@ -310,7 +299,6 @@ export default function CreateProfilePage() {
                   value={formData.mobile_number}
                   onChange={handleChange}
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
-                  placeholder="+91 9876543210"
                 />
               </div>
               <div>
@@ -319,7 +307,7 @@ export default function CreateProfilePage() {
                   name="gender"
                   value={formData.gender}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 bg-white"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white"
                 >
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
@@ -333,7 +321,7 @@ export default function CreateProfilePage() {
                   required
                   value={formData.date_of_birth}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm"
                 />
               </div>
               <div>
@@ -342,7 +330,7 @@ export default function CreateProfilePage() {
                   name="height"
                   value={formData.height}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 bg-white"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white"
                 >
                   {HEIGHT_OPTIONS.map((h) => (
                     <option key={h} value={h}>{h}</option>
@@ -355,7 +343,7 @@ export default function CreateProfilePage() {
                   name="marital_status"
                   value={formData.marital_status}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 bg-white"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white"
                 >
                   <option value="Never Married">Never Married</option>
                   <option value="Divorced">Divorced</option>
@@ -376,8 +364,7 @@ export default function CreateProfilePage() {
                   name="occupation"
                   value={formData.occupation}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
-                  placeholder="e.g. Software Engineer, Doctor"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm"
                 />
               </div>
               <div>
@@ -387,8 +374,7 @@ export default function CreateProfilePage() {
                   name="mother_tongue"
                   value={formData.mother_tongue}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
-                  placeholder="e.g. Telugu"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm"
                 />
               </div>
               <div>
@@ -398,8 +384,7 @@ export default function CreateProfilePage() {
                   name="present_location"
                   value={formData.present_location}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
-                  placeholder="e.g. Hyderabad, Telangana"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm"
                 />
               </div>
               <div>
@@ -409,8 +394,7 @@ export default function CreateProfilePage() {
                   name="city"
                   value={formData.city}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
-                  placeholder="City, State"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm"
                 />
               </div>
             </div>
@@ -427,8 +411,7 @@ export default function CreateProfilePage() {
                   name="caste"
                   value={formData.caste}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
-                  placeholder="Caste"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm"
                 />
               </div>
               <div>
@@ -438,8 +421,7 @@ export default function CreateProfilePage() {
                   name="subcaste"
                   value={formData.subcaste}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
-                  placeholder="Subcaste"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm"
                 />
               </div>
               <div>
@@ -448,7 +430,7 @@ export default function CreateProfilePage() {
                   name="kuja_dosham"
                   value={formData.kuja_dosham}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 bg-white"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white"
                 >
                   <option value="No">No</option>
                   <option value="Yes">Yes</option>
@@ -468,7 +450,7 @@ export default function CreateProfilePage() {
                   name="eating_habits"
                   value={formData.eating_habits}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 bg-white"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white"
                 >
                   <option value="Vegetarian">Vegetarian</option>
                   <option value="Non-vegetarian">Non-vegetarian</option>
@@ -481,7 +463,7 @@ export default function CreateProfilePage() {
                   name="smoking_habits"
                   value={formData.smoking_habits}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 bg-white"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white"
                 >
                   <option value="Non-smoker">Non-smoker</option>
                   <option value="Smoker">Smoker</option>
@@ -493,7 +475,7 @@ export default function CreateProfilePage() {
                   name="drinking_habits"
                   value={formData.drinking_habits}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 bg-white"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white"
                 >
                   <option value="Non-drinker">Non-drinker</option>
                   <option value="Drinker">Drinker</option>
@@ -506,7 +488,7 @@ export default function CreateProfilePage() {
                   name="family_type"
                   value={formData.family_type}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 bg-white"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white"
                 >
                   <option value="Nuclear Family">Nuclear Family</option>
                   <option value="Joint Family">Joint Family</option>
@@ -518,7 +500,7 @@ export default function CreateProfilePage() {
                   name="family_status"
                   value={formData.family_status}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 bg-white"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white"
                 >
                   <option value="Middle Class">Middle Class</option>
                   <option value="Upper Middle Class">Upper Middle Class</option>
@@ -532,8 +514,7 @@ export default function CreateProfilePage() {
                   name="father_occupation"
                   value={formData.father_occupation}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
-                  placeholder="Father's job"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm"
                 />
               </div>
             </div>
@@ -544,14 +525,13 @@ export default function CreateProfilePage() {
             <h3 className="font-bold text-slate-900 text-sm border-b pb-1">Social Profiles (Optional)</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-slate-700 font-semibold mb-1">Instagram Link / Handle</label>
+                <label className="block text-slate-700 font-semibold mb-1">Instagram Link</label>
                 <input
                   type="text"
                   name="instagram"
                   value={formData.instagram}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
-                  placeholder="instagram.com/username"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm"
                 />
               </div>
               <div>
@@ -561,8 +541,7 @@ export default function CreateProfilePage() {
                   name="linked_in"
                   value={formData.linked_in}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
-                  placeholder="linkedin.com/in/username"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm"
                 />
               </div>
             </div>
@@ -578,8 +557,7 @@ export default function CreateProfilePage() {
                 rows={3}
                 value={formData.about_me}
                 onChange={handleChange}
-                className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
-                placeholder="Share your background, education, and interests..."
+                className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm"
               />
             </div>
             <div>
@@ -589,8 +567,7 @@ export default function CreateProfilePage() {
                 rows={3}
                 value={formData.partner_preference}
                 onChange={handleChange}
-                className="w-full px-3py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
-                placeholder="What qualities and preferences are you looking for in a partner?"
+                className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm"
               />
             </div>
           </div>

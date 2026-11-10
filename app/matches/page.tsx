@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
-// Helper to calculate age from date of birth
 function calculateAge(dob: string) {
   if (!dob) return ''
   const diff = Date.now() - new Date(dob).getTime()
@@ -32,26 +31,22 @@ export default function MatchesPage() {
             .eq('id', currentUserId)
             .maybeSingle()
           
-          if (myProfile?.gender) {
-            currentUserGender = myProfile.gender
-          }
+          if (myProfile?.gender) currentUserGender = myProfile.gender
         }
 
         const targetGender = currentUserGender === 'Male' ? 'Female' : 'Male'
 
+        // Fetch opposite gender matches, excluding hidden profiles
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('gender', targetGender)
           .neq('id', currentUserId)
+          .neq('profile_visibility', 'hidden')
           .order('created_at', { ascending: false })
 
-        if (data) {
-          setProfiles(data)
-        }
-        if (error) {
-          console.error('Supabase error:', error.message)
-        }
+        if (data) setProfiles(data)
+        if (error) console.error('Supabase error:', error.message)
       } catch (err) {
         console.error('Fetch error:', err)
       } finally {
@@ -88,10 +83,7 @@ export default function MatchesPage() {
               Compatible Profiles
             </h1>
           </div>
-          <Link
-            href="/"
-            className="text-xs font-medium text-slate-600 hover:text-rose-600 transition-colors"
-          >
+          <Link href="/" className="text-xs font-medium text-slate-600 hover:text-rose-600 transition-colors">
             ← Back to Home
           </Link>
         </div>
@@ -108,32 +100,25 @@ export default function MatchesPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {filteredProfiles.length === 0 ? (
-            <p className="text-sm text-slate-500 col-span-2 text-center py-8">No matching opposite-gender profiles found yet. Try creating or editing a profile with the opposite gender!</p>
+            <p className="text-sm text-slate-500 col-span-2 text-center py-8">No matching opposite-gender profiles found yet.</p>
           ) : (
             filteredProfiles.map((profile) => {
               const age = calculateAge(profile.date_of_birth)
+              const isConnectionsOnly = profile.profile_visibility === 'connections_only'
+
               return (
                 <div key={profile.id} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between space-y-4">
-                  
-                  {/* Split Layout: Left Side Photo, Right Side Details */}
                   <div className="flex gap-4 items-start">
-                    
-                    {/* Left Column: Larger Photo */}
                     <div className="flex-shrink-0">
-                      {profile.photo_url ? (
-                        <img 
-                          src={profile.photo_url} 
-                          alt={profile.full_name} 
-                          className="w-24 h-32 rounded-xl object-cover border border-slate-200 shadow-sm" 
-                        />
+                      {profile.photo_url && !isConnectionsOnly ? (
+                        <img src={profile.photo_url} alt={profile.full_name} className="w-24 h-32 rounded-xl object-cover border border-slate-200 shadow-sm" />
                       ) : (
-                        <div className="w-24 h-32 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 text-xs font-bold border border-slate-200">
-                          No Photo
+                        <div className="w-24 h-32 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 text-[10px] text-center p-2 border border-slate-200">
+                          {isConnectionsOnly ? '🔒 Photo Locked' : 'No Photo'}
                         </div>
                       )}
                     </div>
 
-                    {/* Right Column: Profile Info */}
                     <div className="flex-1 space-y-2">
                       <div className="flex justify-between items-start">
                         <div>
@@ -149,22 +134,16 @@ export default function MatchesPage() {
                         <p className="font-semibold text-slate-900">
                           {age ? `${age} Yrs` : 'Age N/A'} {profile.height ? `• ${profile.height}` : ''}
                         </p>
-                        <p className="text-slate-600">
-                          💼 {profile.occupation || 'Occupation N/A'}
-                        </p>
-                        <p className="text-slate-500">
-                          📍 {profile.present_location || `${profile.city}, ${profile.state}` || 'Location N/A'}
-                        </p>
+                        <p className="text-slate-600">💼 {profile.occupation || 'Occupation N/A'}</p>
+                        <p className="text-slate-500">📍 {profile.present_location || `${profile.city}, ${profile.state}` || 'Location N/A'}</p>
                       </div>
 
                       <p className="text-[11px] text-slate-600 line-clamp-2">
                         {profile.about_me || 'No description provided.'}
                       </p>
                     </div>
-
                   </div>
 
-                  {/* View Full Biodata Button */}
                   <Link
                     href={`/profile?id=${profile.id}`}
                     className="w-full py-2 px-4 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-800 text-center font-medium text-xs transition-all block"
