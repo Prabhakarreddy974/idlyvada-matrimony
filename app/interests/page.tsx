@@ -154,9 +154,17 @@ export default function InterestsPage() {
                   </div>
 
                   {item.status === 'accepted' && (
-                    <div className="bg-emerald-50 border border-emerald-100 p-3 rounded-xl text-xs text-emerald-800 flex justify-between items-center">
-                      <span>Contact Number Unlocked:</span>
-                      <strong className="font-mono text-sm">{sender?.mobile_number || 'Not Provided'}</strong>
+                    <div className="space-y-2 pt-2">
+                      <div className="bg-emerald-50 border border-emerald-100 p-3 rounded-xl text-xs text-emerald-800 flex justify-between items-center">
+                        <span>Contact Number Unlocked:</span>
+                        <strong className="font-mono text-sm">{sender?.mobile_number || 'Not Provided'}</strong>
+                      </div>
+                      <Link
+                        href={`/chat?to=${sender?.id}`}
+                        className="w-full py-2 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-center font-medium text-xs transition-all block shadow-sm"
+                      >
+                        💬 Open Chat Conversation →
+                      </Link>
                     </div>
                   )}
 
@@ -223,9 +231,17 @@ export default function InterestsPage() {
                   </div>
 
                   {item.status === 'accepted' && (
-                    <div className="bg-emerald-50 border border-emerald-100 p-3 rounded-xl text-xs text-emerald-800 flex justify-between items-center">
-                      <span>Contact Number Unlocked:</span>
-                      <strong className="font-mono text-sm">{receiver?.mobile_number || 'Not Provided'}</strong>
+                    <div className="space-y-2 pt-2">
+                      <div className="bg-emerald-50 border border-emerald-100 p-3 rounded-xl text-xs text-emerald-800 flex justify-between items-center">
+                        <span>Contact Number Unlocked:</span>
+                        <strong className="font-mono text-sm">{receiver?.mobile_number || 'Not Provided'}</strong>
+                      </div>
+                      <Link
+                        href={`/chat?to=${receiver?.id}`}
+                        className="w-full py-2 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-center font-medium text-xs transition-all block shadow-sm"
+                      >
+                        💬 Open Chat Conversation →
+                      </Link>
                     </div>
                   )}
 
