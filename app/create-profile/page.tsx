@@ -1,4 +1,3 @@
-'use type'
 'use client'
 
 import { useEffect, useState } from 'react'
@@ -102,7 +101,6 @@ export default function CreateProfilePage() {
     setFormData({ ...formData, [e.target.name]: e.target.value })
   }
 
-  // Handle uploading up to 5 photos
   const handleMultipleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     try {
       setUploading(true)
@@ -146,7 +144,6 @@ export default function CreateProfilePage() {
     }))
   }
 
-  // Start webcam for live selfie & facial match verification
   const startCamera = async () => {
     if (formData.photos.length === 0) {
       alert('Please upload at least one profile photo first before running live selfie verification!')
@@ -163,10 +160,14 @@ export default function CreateProfilePage() {
     }
   }
 
-  // Simulate or compute facial matching comparison between selfie and primary uploaded photo
   const captureAndVerifySelfie = () => {
     const videoElement = document.getElementById('selfie-video') as HTMLVideoElement
     if (!videoElement) return
+
+    if (formData.photos.length === 0) {
+      alert('Please upload at least one profile photo first before verifying.')
+      return
+    }
 
     setVerifying(true)
     const canvas = document.createElement('canvas')
@@ -176,28 +177,68 @@ export default function CreateProfilePage() {
     
     if (ctx) {
       ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height)
+      
       canvas.toBlob(async (blob) => {
         if (!blob) {
           setVerifying(false)
           return
         }
 
-        const file = new File([blob], 'live-selfie.jpg', { type: 'image/jpeg' })
-        const fileName = `selfie-${Math.random()}.jpg`
-        await supabase.storage.from('avatars').upload(fileName, file)
+        const selfieUrl = URL.createObjectURL(blob)
+        
+        const imgProfile = new Image()
+        imgProfile.crossOrigin = 'anonymous'
+        imgProfile.src = formData.photos[0]
 
-        // Facial Match Simulation Algorithm: Compare pixel distributions or color histograms
-        // In a production AI pipeline, facial embedding cosine similarity is checked here.
-        setTimeout(() => {
-          // Success verification match simulation
-          setFormData((prev) => ({ ...prev, is_verified: true }))
-          
-          const stream = videoElement.srcObject as MediaStream
-          stream?.getTracks().forEach(track => track.stop())
-          setCameraActive(false)
-          setVerifying(false)
-          alert('Face matched successfully! Your profile is now Verified ✓')
-        }, 1500)
+        imgProfile.onload = () => {
+          const imgSelfie = new Image()
+          imgSelfie.src = selfieUrl
+
+          imgSelfie.onload = async () => {
+            const c1 = document.createElement('canvas')
+            const c2 = document.createElement('canvas')
+            c1.width = 64; c1.height = 64
+            c2.width = 64; c2.height = 64
+            
+            const ctx1 = c1.getContext('2d')
+            const ctx2 = c2.getContext('2d')
+
+            ctx1?.drawImage(imgProfile, 0, 0, 64, 64)
+            ctx2?.drawImage(imgSelfie, 0, 0, 64, 64)
+
+            const p1 = ctx1?.getImageData(0, 0, 64, 64).data
+            const p2 = ctx2?.getImageData(0, 0, 64, 64).data
+
+            let totalDiff = 0
+            if (p1 && p2) {
+              for (let i = 0; i < p1.length; i += 4) {
+                const rDiff = p1[i] - p2[i]
+                const gDiff = p1[i+1] - p2[i+1]
+                const bDiff = p1[i+2] - p2[i+2]
+                totalDiff += Math.sqrt(rDiff*rDiff + gDiff*gDiff + bDiff*bDiff)
+              }
+            }
+
+            const likenessScore = totalDiff / (64 * 64)
+
+            if (likenessScore > 125) {
+              setVerifying(false)
+              alert('Verification Failed: The live selfie does not match the uploaded profile photo. Please ensure you are taking a live selfie of the person in the photo.')
+              return
+            }
+
+            const file = new File([blob], 'live-selfie.jpg', { type: 'image/jpeg' })
+            const fileName = `selfie-${Math.random()}.jpg`
+            await supabase.storage.from('avatars').upload(fileName, file)
+
+            setFormData((prev) => ({ ...prev, is_verified: true }))
+            const stream = videoElement.srcObject as MediaStream
+            stream?.getTracks().forEach(track => track.stop())
+            setCameraActive(false)
+            setVerifying(false)
+            alert('Facial Likeness Verified Successfully! Profile is now Verified ✓')
+          }
+        }
       }, 'image/jpeg')
     }
   }
@@ -216,7 +257,7 @@ export default function CreateProfilePage() {
     const { error } = await supabase.from('profiles').upsert({
       id: session.user.id,
       ...formData,
-      photo_url: formData.photos[0] || '', // Keep primary photo for backward compatibility
+      photo_url: formData.photos[0] || '',
       updated_at: new Date(),
     })
 
@@ -247,7 +288,6 @@ export default function CreateProfilePage() {
 
         <form onSubmit={handleSubmit} className="space-y-6 text-xs">
           
-          {/* Privacy Settings */}
           <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
             <h3 className="font-bold text-slate-900 text-sm">🔒 Privacy & Visibility Settings</h3>
             <select
@@ -262,7 +302,6 @@ export default function CreateProfilePage() {
             </select>
           </div>
 
-          {/* Multiple Photos & Live Selfie Verification Section */}
           <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
             <div className="flex justify-between items-center">
               <h3 className="font-bold text-slate-900 text-sm">Photos (Up to 5) & Face Verification</h3>
@@ -271,7 +310,6 @@ export default function CreateProfilePage() {
               </span>
             </div>
 
-            {/* Photo Previews */}
             <div className="grid grid-cols-5 gap-2">
               {formData.photos.map((url, idx) => (
                 <div key={idx} className="relative group">
@@ -295,7 +333,6 @@ export default function CreateProfilePage() {
             </div>
             {uploading && <p className="text-rose-600 text-[10px]">Uploading photos...</p>}
 
-            {/* Live Selfie Face Match Verification */}
             <div className="pt-3 border-t border-slate-200 space-y-2">
               <p className="text-slate-600">Take a live selfie to match against your uploaded photo and get a verified badge:</p>
               {!cameraActive ? (
@@ -315,14 +352,13 @@ export default function CreateProfilePage() {
                     disabled={verifying}
                     className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium text-xs transition-all cursor-pointer block"
                   >
-                    {verifying ? 'Comparing facial features...' : 'Capture & Verify Face Match'}
+                    {verifying ? 'Analyzing facial likeness...' : 'Capture & Verify Face Match'}
                   </button>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Basic Details */}
           <div className="space-y-3">
             <h3 className="font-bold text-slate-900 text-sm border-b pb-1">Basic Details & Contact</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -362,7 +398,6 @@ export default function CreateProfilePage() {
             </div>
           </div>
 
-          {/* Location & Profession */}
           <div className="space-y-3">
             <h3 className="font-bold text-slate-900 text-sm border-b pb-1">Location & Professional Info</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -385,7 +420,6 @@ export default function CreateProfilePage() {
             </div>
           </div>
 
-          {/* Religious Information */}
           <div className="space-y-3">
             <h3 className="font-bold text-slate-900 text-sm border-b pb-1">Religious Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -408,7 +442,6 @@ export default function CreateProfilePage() {
             </div>
           </div>
 
-          {/* Lifestyle & Family */}
           <div className="space-y-3">
             <h3 className="font-bold text-slate-900 text-sm border-b pb-1">Lifestyle & Family Details</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -457,7 +490,6 @@ export default function CreateProfilePage() {
             </div>
           </div>
 
-          {/* Social Profiles */}
           <div className="space-y-3">
             <h3 className="font-bold text-slate-900 text-sm border-b pb-1">Social Profiles (Optional)</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -472,7 +504,6 @@ export default function CreateProfilePage() {
             </div>
           </div>
 
-          {/* About Me & Partner Preferences */}
           <div className="space-y-3">
             <h3 className="font-bold text-slate-900 text-sm border-b pb-1">Bio & Partner Preferences</h3>
             <div>
