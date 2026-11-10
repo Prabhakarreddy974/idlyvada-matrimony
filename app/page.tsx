@@ -6,16 +6,44 @@ import Link from 'next/link'
 
 export default function Home() {
   const [session, setSession] = useState<any>(null)
+  const [profileName, setProfileName] = useState<string>('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    async function initUser() {
+      const { data: { session } } = await supabase.auth.getSession()
       setSession(session)
-      setLoading(false)
-    })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        // Fetch user's profile full_name from the profiles table
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', session.user.id)
+          .maybeSingle()
+
+        if (profileData?.full_name) {
+          setProfileName(profileData.full_name)
+        }
+      }
+      setLoading(false)
+    }
+
+    initUser()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session)
+      if (session?.user) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', session.user.id)
+          .maybeSingle()
+
+        if (profileData?.full_name) {
+          setProfileName(profileData.full_name)
+        }
+      }
     })
 
     return () => subscription.unsubscribe()
@@ -51,7 +79,7 @@ export default function Home() {
         {session ? (
           <div className="space-y-4">
             <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs text-slate-600">
-              Signed in as: <strong className="text-slate-900">{session.user.email}</strong>
+              Welcome back, <strong className="text-slate-900">{profileName || session.user.email}</strong>
             </div>
 
             <div className="space-y-2.5">
