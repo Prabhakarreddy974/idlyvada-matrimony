@@ -3,7 +3,6 @@
 @tailwind utilities;
 
 @layer utilities {
-  /* Disable text selection and image dragging on sensitive containers */
   .no-screenshot {
     user-select: none;
     -webkit-user-select: none;
